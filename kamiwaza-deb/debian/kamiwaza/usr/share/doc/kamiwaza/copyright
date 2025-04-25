@@ -1,0 +1,11 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kamiwaza
+Source: https://kamiwaza.ai
+
+Files: *
+Copyright: 2024 Kamiwaza Team
+License: Proprietary
+
+License: Proprietary
+ All rights reserved.
+ This software is proprietary and may not be redistributed without permission. 

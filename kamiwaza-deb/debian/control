@@ -7,7 +7,7 @@ Standards-Version: 4.6.0
 Homepage: https://kamiwaza.ai
 
 Package: kamiwaza
-Architecture: all
+Architecture: amd64
 Depends: ${misc:Depends},
          python3.10,
          python3.10-dev,
@@ -25,9 +25,9 @@ Depends: ${misc:Depends},
          docker-ce,
          docker-ce-cli,
          containerd.io,
-         nvidia-driver-550-server [linux-amd64],
-         nvidia-container-toolkit [linux-amd64],
-         nvidia-docker2 [linux-amd64],
+         nvidia-driver-550-server,
+         nvidia-container-toolkit,
+         nvidia-docker2,
          libcairo2-dev,
          libgirepository1.0-dev
 Description: Kamiwaza AI Platform

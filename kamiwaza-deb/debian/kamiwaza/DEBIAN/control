@@ -1,0 +1,12 @@
+Package: kamiwaza
+Version: 0.3.3-1
+Architecture: amd64
+Maintainer: Kamiwaza Team <support@kamiwaza.ai>
+Installed-Size: 21
+Depends: python3.10, python3.10-dev, libpython3.10-dev, python3.10-venv, golang-cfssl, python-is-python3, etcd-client, net-tools, jq, apt-transport-https, ca-certificates, curl, software-properties-common, docker-ce, docker-ce-cli, containerd.io, nvidia-driver-550-server, nvidia-container-toolkit, nvidia-docker2, libcairo2-dev, libgirepository1.0-dev
+Section: utils
+Priority: optional
+Homepage: https://kamiwaza.ai
+Description: Kamiwaza AI Platform
+ Kamiwaza is an AI platform that provides various AI services and tools.
+ This package includes all necessary dependencies and installation scripts.
