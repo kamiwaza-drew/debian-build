@@ -57,9 +57,21 @@ fi
 # Install additional dependencies
 apt install -y libcairo2-dev libgirepository1.0-dev
 
-# Run the installation script from the extracted tar
-cd $(find . -type d -name "kamiwaza-community-*" | head -n 1)
-bash install.sh --community
+# Find and run the installation script
+KAMIWAZA_DIR=$(find . -type d -name "kamiwaza-community-*" | head -n 1)
+if [ -n "$KAMIWAZA_DIR" ]; then
+    cd "$KAMIWAZA_DIR"
+    if [ -f "install.sh" ]; then
+        echo "Running install.sh..."
+        bash install.sh --community
+    else
+        echo "Error: install.sh not found in $KAMIWAZA_DIR"
+        exit 1
+    fi
+else
+    echo "Error: Could not find kamiwaza-community directory"
+    exit 1
+fi
 
 # Set permissions
 chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
@@ -81,10 +93,8 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd to recognize the new service
-systemctl daemon-reload
-
 # Enable and start the service
+systemctl daemon-reload
 systemctl enable kamiwaza
 systemctl start kamiwaza
 
