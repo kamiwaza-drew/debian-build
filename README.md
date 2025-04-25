@@ -14,12 +14,13 @@ This repository contains the Debian packaging files for Kamiwaza AI Platform.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/kamiwaza-ai/kamiwaza-deb.git
-cd kamiwaza-deb
+git clone https://github.com/kamiwaza-drew/debian-build.git
+cd debian-build
 ```
 
 2. Build the package:
 ```bash
+cd kamiwaza-deb
 dpkg-buildpackage -us -uc
 ```
 
@@ -39,26 +40,26 @@ sudo apt --fix-broken install
 
 ### Package Structure
 
-- `debian/control`: Package metadata and dependencies
-- `debian/rules`: Build instructions
-- `debian/changelog`: Version history
-- `debian/copyright`: License information
-- `debian/kamiwaza.postinst`: Post-installation script
-- `debian/kamiwaza.postrm`: Post-removal script
-- `debian/kamiwaza.prerm`: Pre-removal script
+- `kamiwaza-deb/debian/control`: Package metadata and dependencies
+- `kamiwaza-deb/debian/rules`: Build instructions
+- `kamiwaza-deb/debian/changelog`: Version history
+- `kamiwaza-deb/debian/copyright`: License information
+- `kamiwaza-deb/debian/kamiwaza.postinst`: Post-installation script
+- `kamiwaza-deb/debian/kamiwaza.postrm`: Post-removal script
+- `kamiwaza-deb/debian/kamiwaza.prerm`: Pre-removal script
 
 ## Development
 
 ### Adding New Dependencies
 
-Edit `debian/control` to add new dependencies. Use:
+Edit `kamiwaza-deb/debian/control` to add new dependencies. Use:
 - `Depends:` for required dependencies
 - `Recommends:` for optional dependencies
 
 ### Updating Version
 
-1. Update version in `debian/changelog`
-2. Update version in `debian/control` if needed
+1. Update version in `kamiwaza-deb/debian/changelog`
+2. Update version in `kamiwaza-deb/debian/control` if needed
 
 ## License
 
