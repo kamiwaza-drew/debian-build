@@ -11,10 +11,11 @@
 *~
 .DS_Store
 
-# Build directories
+# Build directories and files
 temp-build/
 debian/files
 debian/.debhelper/
 debian/debhelper-build-stamp
-debian/kamiwaza.debhelper.log
 debian/kamiwaza.substvars
+debian/kamiwaza/
+debian/kamiwaza.debhelper.log

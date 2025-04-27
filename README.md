@@ -1,16 +1,22 @@
 # Kamiwaza Debian Package
 
-This repository contains the Debian packaging files for Kamiwaza AI Platform.
+This repository contains the Debian packaging files for Kamiwaza AI Platform. The package automates the installation of Kamiwaza and all its dependencies on Ubuntu systems.
 
-## Building the Package
+## Features
 
-### Prerequisites
+- Automatic installation of all required dependencies
+- Systemd service integration
+- NVIDIA driver and Docker configuration
+- Automatic download and installation of the latest Kamiwaza release
 
-- Debian/Ubuntu system
+## Prerequisites
+
+- Ubuntu 22.04 LTS or later
 - `dpkg-dev` package
 - `debhelper` package
+- sudo privileges
 
-### Build Steps
+## Building the Package
 
 1. Clone the repository:
 ```bash
@@ -18,15 +24,27 @@ git clone https://github.com/kamiwaza-drew/debian-build.git
 cd debian-build
 ```
 
-2. Build the package:
+2. Install build dependencies:
+```bash
+sudo apt install -y dpkg-dev debhelper
+```
+
+3. Build the package:
 ```bash
 cd kamiwaza-deb
 dpkg-buildpackage -us -uc
 ```
+<!-- Add documentation on when to use:
+cd ~/debian-packaging/kamiwaza-deb && sudo dpkg-buildpackage -us -uc -rfakeroot -->
+Additionally, if you're building the package in a non-standard environment or without proper permissions, you may need to use fakeroot:
+
+```bash
+cd ~/debian-packaging/kamiwaza-deb && sudo dpkg-buildpackage -us -uc -rfakeroot
+```
 
 The built package will be created in the parent directory as `kamiwaza_0.3.3-1_amd64.deb`.
 
-### Installation
+## Installation
 
 1. Install the package:
 ```bash
@@ -38,7 +56,14 @@ sudo dpkg -i ../kamiwaza_0.3.3-1_amd64.deb
 sudo apt --fix-broken install
 ```
 
-### Package Structure
+The installation process will:
+- Download and install all required dependencies
+- Set up Docker and NVIDIA drivers (if applicable)
+- Download and extract the latest Kamiwaza release
+- Run the installation script
+- Configure and start the Kamiwaza service
+
+## Package Structure
 
 - `kamiwaza-deb/debian/control`: Package metadata and dependencies
 - `kamiwaza-deb/debian/rules`: Build instructions
@@ -60,6 +85,13 @@ Edit `kamiwaza-deb/debian/control` to add new dependencies. Use:
 
 1. Update version in `kamiwaza-deb/debian/changelog`
 2. Update version in `kamiwaza-deb/debian/control` if needed
+
+## Troubleshooting
+
+If you encounter any issues during installation:
+1. Check the system logs: `journalctl -u kamiwaza`
+2. Verify service status: `systemctl status kamiwaza`
+3. Check installation directory: `/opt/kamiwaza`
 
 ## License
 
