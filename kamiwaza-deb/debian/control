@@ -22,14 +22,12 @@ Depends: ${misc:Depends},
          ca-certificates,
          curl,
          software-properties-common,
-         docker-ce,
-         docker-ce-cli,
-         containerd.io,
-         nvidia-driver-550-server,
-         nvidia-container-toolkit,
-         nvidia-docker2,
          libcairo2-dev,
          libgirepository1.0-dev
+Recommends: docker.io,
+           nvidia-driver-550-server,
+           nvidia-container-toolkit,
+           nvidia-docker2
 Description: Kamiwaza AI Platform
  Kamiwaza is an AI platform that provides various AI services and tools.
  This package includes all necessary dependencies and installation scripts. 
