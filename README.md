@@ -81,6 +81,9 @@ Edit `kamiwaza-deb/debian/control` to add new dependencies. Use:
 - `Depends:` for required dependencies
 - `Recommends:` for optional dependencies
 
+### Changing Download Directory
+In the postinst file, there is a line that says ```INSTALL_DIR="/opt/kamiwaza"``` this will need to be changed to alter the default dir.
+
 ### Updating Version
 
 1. Update version in `kamiwaza-deb/debian/changelog`
