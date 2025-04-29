@@ -58,6 +58,10 @@ The built package will be created in the parent directory as `kamiwaza_0.3.3-1_a
 ```bash
  sudo apt install ./kamiwaza_0.3.3-1_amd64.deb
  ```
+ Or if you've added your instance's ssh info and want additional cleanup scripts, run: 
+ ```bash
+ bash get_new_kmz.sh
+ ```
 
 2. If there are missing dependencies:
 ```bash
@@ -106,4 +110,4 @@ If you encounter any issues during installation:
 
 ## License
 
-Proprietary - All rights reserved 
+Copyright © 2025 Kamiwaza.ai - All rights reserved
