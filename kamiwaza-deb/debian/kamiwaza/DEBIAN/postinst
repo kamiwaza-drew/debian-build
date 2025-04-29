@@ -1,12 +1,179 @@
 #!/bin/sh
 # postinst script for kamiwaza
+echo "=== Starting Kamiwaza installation 4 ==="
 
 set -e
 
-echo "=== Starting Kamiwaza installation ==="
+
+
+sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock /var/lib/apt/lists/lock
+
+
+
+# Version of this package
+PACKAGE_VERSION="0.3.3-1"
+
+# Function to compare version strings
+version_gt() {
+    test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"
+}
+
+# Function to get installed version
+get_installed_version() {
+    dpkg-query -W -f='${Version}' kamiwaza 2>/dev/null || echo "0.0.0-0"
+}
+
 echo "Current directory: $(pwd)"
 echo "User: $USER"
 echo "SUDO_USER: $SUDO_USER"
+
+# # Check if we're installing an older version
+# INSTALLED_VERSION=$(get_installed_version)
+# if ! version_gt "$PACKAGE_VERSION" "$INSTALLED_VERSION"; then
+#     echo "WARNING: Attempting to install version $PACKAGE_VERSION but version $INSTALLED_VERSION is already installed"
+#     if [ "$FORCE_INSTALL" != "true" ]; then
+#         echo "Forcing removal of existing installation to ensure clean state..."
+#         # Kill any existing processes
+#         pkill -9 -f "kamiwaza" || true
+#         # Remove existing installation
+#         rm -rf /opt/kamiwaza/*
+#         # Force remove package without removing config
+#         dpkg -r --force-all kamiwaza || true
+#     fi
+# fi
+
+# After version check, add timestamp verification for downloaded files
+# echo "=== Verifying file timestamps ==="
+# TIMESTAMP_FILE="/opt/kamiwaza/.last_install"
+# CURRENT_TIME=$(date +%s)
+
+# # Function to check if a file is newer than timestamp
+# is_file_newer() {
+#     local file="$1"
+#     local timestamp="$2"
+#     if [ -f "$file" ]; then
+#         local file_time=$(stat -c %Y "$file")
+#         test "$file_time" -gt "$timestamp"
+#     else
+#         # If file doesn't exist, consider it "newer"
+#         return 0
+#     fi
+# }
+
+# # If timestamp exists and files are older, force clean install
+# if [ -f "$TIMESTAMP_FILE" ]; then
+#     LAST_INSTALL=$(cat "$TIMESTAMP_FILE")
+#     if ! is_file_newer "$TAR_FILE" "$LAST_INSTALL"; then
+#         echo "Detected older installation files, forcing clean install..."
+#         rm -rf /opt/kamiwaza/*
+#         rm -f "$TIMESTAMP_FILE"
+#     fi
+# fi
+
+
+# Add deadsnakes PPA for Python if needed
+add-apt-repository -y ppa:deadsnakes/ppa || true
+
+# Update package lists
+apt-get update -y
+
+# Ensure /usr/local/bin is in PATH
+export PATH="/usr/local/bin:$PATH"
+
+# # Install Docker Compose V2 if not present
+# echo "=== Checking/Installing Docker Compose V2 heh ==="
+# if ! docker compose version >/dev/null 2>&1; then
+#     echo "Installing Docker Compose V2..."
+#     # First try package manager
+#     if command -v apt-get >/dev/null 2>&1; then
+#        sudo apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+#     else
+#         # Manual installation as fallback
+#         mkdir -p /usr/local/lib/docker/cli-plugins
+#         curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+#         chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+#     fi
+    
+#     # Verify installation
+#     if docker compose version >/dev/null 2>&1; then
+#         echo "Docker Compose V2 installed successfully"
+#     else
+#         echo "Error: Docker Compose V2 installation failed"
+#         exit 1
+#     fi
+# fi
+
+# Install CockroachDB if not present
+echo "=== Checking/Installing CockroachDB ==="
+if ! command -v cockroach >/dev/null 2>&1; then
+    echo "Installing CockroachDB..."
+    cd /tmp
+    curl -O https://binaries.cockroachdb.com/cockroach-v24.1.0.linux-amd64.tgz
+    tar xzf cockroach-v24.1.0.linux-amd64.tgz
+    sudo cp -f cockroach-v24.1.0.linux-amd64/cockroach /usr/local/bin/
+    sudo chmod 755 /usr/local/bin/cockroach
+    rm -rf cockroach-v24.1.0.linux-amd64*
+    echo "CockroachDB installed successfully"
+fi
+
+
+# Check for supported distributions
+check_distribution() {
+    if command -v lsb_release >/dev/null 2>&1; then
+        distro=$(lsb_release -is)
+        if [ "$distro" != "Ubuntu" ]; then
+            echo "This script is designed for Ubuntu. Exiting."
+            exit 1
+        fi
+        echo "Running on $(lsb_release -ds)"
+    elif [ -f /etc/redhat-release ]; then
+        echo "Running on RedHat-based system: $(cat /etc/redhat-release)"
+        export IS_REDHAT=true
+    else
+        echo "Unsupported distribution. This script requires Ubuntu or RedHat-based systems."
+        exit 1
+    fi
+}
+
+# Wait for package manager lock function
+wait_for_package_lock() {
+    echo "Removing any existing package manager locks..."
+    
+    if [ "$IS_REDHAT" = true ]; then
+        # Remove RedHat package manager locks
+        sudo rm -f /var/run/yum.pid /var/run/dnf.pid
+    else
+        # Remove Ubuntu package manager locks
+        sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+    fi
+    
+    echo "Locks removed, proceeding with installation..."
+}
+
+# Check distribution
+check_distribution
+
+# # Install required dependencies for PyGObject and PyCairo
+# echo "=== Installing PyGObject and PyCairo dependencies ==="
+# wait_for_package_lock
+
+# if [ "$IS_REDHAT" = true ]; then
+#     # RedHat-based system
+#     sudo yum install -y meson ninja-build cairo-devel pkgconfig python3-devel
+# else
+#     echo "Removing existing kamiwaza installation..."
+#     sudo apt-get remove --purge kamiwaza
+#     echo "Cleaning up package manager..."
+#     sudo apt-get clean
+#     sudo apt-get update 
+#     echo "Installing PyGObject and PyCairo dependencies..."
+#     # Ubuntu
+#     sudo apt install -y meson ninja-build libcairo2-dev pkg-config
+# fi
+
+# echo "PyGObject and PyCairo dependencies installed successfully"
+
 
 # Create installation directory
 echo "=== Creating installation directory ==="
@@ -36,9 +203,77 @@ wget "$TAR_URL"
 echo "Extracting $TAR_FILE..."
 tar -xvf $TAR_FILE
 
+# ============= DEV-ONLY: Overwrite extracted files with /home/kamiwaza/temp_use/ =============
+echo "=== [DEV ONLY] Overwriting extracted files with /home/kamiwaza/temp_use/ ==="
+if [ -d "/home/kamiwaza/temp_use/" ]; then
+    cp -rf /home/kamiwaza/temp_use/* "$INSTALL_DIR/"
+    echo "[DEV ONLY] Copied files from /home/kamiwaza/temp_use/ to $INSTALL_DIR/"
+else
+    echo "[DEV ONLY] /home/kamiwaza/temp_use/ does not exist, skipping dev overwrite."
+fi
+# ============= END DEV-ONLY =============
+
 # Set permissions
 echo "=== Setting permissions ==="
 chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
+
+echo "=== Checking Python 3.10 installation ==="
+# Check for Python 3.10
+if ! command -v python3.10 >/dev/null 2>&1; then
+    echo "Python 3.10 not found. Installing Python 3.10..."
+    sudo apt-get remove --purge kamiwaza
+    sudo apt-get clean
+    sudo apt-get update
+    sudo apt install -y python3.10 python3.10-dev python3.10-venv libpython3.10-dev
+    if ! command -v python3.10 >/dev/null 2>&1; then
+        echo "Failed to install Python 3.10. Attempting to install from deadsnakes PPA..."
+        add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt update
+        sudo apt install -y python3.10 python3.10-dev python3.10-venv libpython3.10-dev
+    fi
+    if ! command -v python3.10 >/dev/null 2>&1; then
+        echo "ERROR: Failed to install Python 3.10 after multiple attempts."
+        exit 1
+    fi
+    echo "Python 3.10 installed successfully."
+fi
+
+# Ensure pip is installed
+echo "=== Checking pip installation ==="
+if ! command -v pip >/dev/null 2>&1; then
+    echo "Installing pip..."
+    sudo apt install -y python3-pip
+    if ! command -v pip >/dev/null 2>&1; then
+        echo "Failed to install pip through apt. Trying alternative method..."
+        curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+        sudo python3.10 get-pip.py
+        rm get-pip.py
+    fi
+    if ! command -v pip >/dev/null 2>&1; then
+        echo "ERROR: Failed to install pip after multiple attempts."
+        exit 1
+    fi
+    echo "pip installed successfully."
+fi
+
+# Make sure 'python' command points to Python 3.10
+echo "=== Setting up python command to use Python 3.10 ==="
+if [ -e /usr/bin/python ]; then
+    echo "Updating existing python symlink..."
+    rm -f /usr/bin/python
+
+fi
+ln -sf /usr/bin/python3.10 /usr/bin/python
+echo "python now points to $(readlink -f /usr/bin/python)"
+
+
+# # Create virtual environment as the user (if needed)
+# if [ ! -d "$INSTALL_DIR/venv" ]; then
+#     echo "Creating Python virtual environment as $SUDO_USER..."
+#     sudo -u $SUDO_USER python3.10 -m venv "$INSTALL_DIR/venv"
+# fi
+# # Activate and install requirements as the user
+# sudo -u $SUDO_USER bash -c "source $INSTALL_DIR/venv/bin/activate && pip install -r $INSTALL_DIR/requirements.txt"
 
 # Create startup script
 echo "=== Creating startup script ==="
@@ -62,9 +297,11 @@ EOF
 echo "=== Looking for installation script ==="
 cd $INSTALL_DIR
 echo "Changed to directory: $(pwd)"
+echo "USER: $USER"
+echo "SUDO_USER: $SUDO_USER"
 if [ -f "install.sh" ]; then
-    echo "Running install.sh with community and license acceptance flags..."
-    bash install.sh --community --i-accept-the-kamiwaza-license
+    echo "Running install.sh with community and license acceptance flags as USER $SUDO_USER..."
+    sudo -u $SUDO_USER bash install.sh --community --i-accept-the-kamiwaza-license
 else
     echo "Error: install.sh not found in $(pwd)"
     exit 1
@@ -77,4 +314,21 @@ systemctl enable kamiwaza
 systemctl start kamiwaza
 
 echo "=== Installation complete! ==="
-exit 0 
+exit 0
+
+# REQUIRED_PACKAGES="golang-cfssl etcd-client net-tools jq libcairo2-dev libgirepository1.0-dev"
+# RECOMMENDED_PACKAGES="nvidia-driver-550-server nvidia-container-toolkit nvidia-docker2"
+
+# for pkg in $REQUIRED_PACKAGES; do
+#     if ! dpkg -s $pkg >/dev/null 2>&1; then
+#         sudo apt install -y $pkg || echo "WARNING: Failed to install $pkg"
+#     fi
+# done
+
+# for pkg in $RECOMMENDED_PACKAGES; do
+#     if ! dpkg -s $pkg >/dev/null 2>&1; then
+#         sudo apt install -y $pkg || echo "WARNING: Failed to install recommended $pkg"
+#     fi
+# done
+
+echo "If you encounter broken packages, please run: sudo apt install -f" 
