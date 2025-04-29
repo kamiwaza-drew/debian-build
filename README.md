@@ -63,6 +63,31 @@ The built package will be created in the parent directory as `kamiwaza_0.3.3-1_a
  bash get_new_kmz.sh
  ```
 
+### Using get_new_kmz.sh
+The `get_new_kmz.sh` script automates the following process:
+- Wipes existing Kamiwaza installation using `wipe_linux_kz_install.sh --force-wipe`
+- Copies the latest Kamiwaza package from the remote server
+- Removes any old Kamiwaza package
+- Installs the new Debian package
+
+### Using wipe_linux_kz_install.sh
+The `wipe_linux_kz_install.sh` script performs a comprehensive cleanup of Kamiwaza installations:
+- Removes all Docker containers, images, and volumes related to Kamiwaza
+- Cleans up Python packages and environments
+- Removes CockroachDB installations
+- Removes all Kamiwaza-related system packages
+- Cleans up Debian packages and files
+- Removes pip packages and cache
+
+Usage:
+```bash
+# Interactive mode (requires confirmation)
+bash wipe_linux_kz_install.sh
+
+# Force mode (no confirmation needed)
+bash wipe_linux_kz_install.sh --force-wipe
+```
+
 2. If there are missing dependencies:
 ```bash
 sudo apt --fix-broken install
@@ -107,6 +132,21 @@ If you encounter any issues during installation:
 1. Check the system logs: `journalctl -u kamiwaza`
 2. Verify service status: `systemctl status kamiwaza`
 3. Check installation directory: `/opt/kamiwaza`
+
+### Clean Installation
+If you're experiencing issues with your Kamiwaza installation:
+
+1. Run the wipe script to completely remove the existing installation:
+```bash
+bash wipe_linux_kz_install.sh
+```
+
+2. Install a fresh copy using:
+```bash
+bash get_new_kmz.sh
+```
+
+This will ensure a clean installation by removing all previous components and installing the latest version.
 
 ## License
 
