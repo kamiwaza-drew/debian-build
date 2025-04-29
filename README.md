@@ -16,6 +16,9 @@ This repository contains the Debian packaging files for Kamiwaza AI Platform. Th
 - `debhelper` package
 - sudo privileges
 
+<!-- #################### -->
+<!-- BUILD / COMPILE SIDE -->
+<!-- #################### -->
 ## Building the Package
 
 1. Clone the repository:
@@ -44,12 +47,17 @@ cd ~/debian-packaging/kamiwaza-deb && sudo dpkg-buildpackage -us -uc -rfakeroot
 
 The built package will be created in the parent directory as `kamiwaza_0.3.3-1_amd64.deb`.
 
+
+<!-- #################### -->
+<!-- INSTALL SIDE -->
+<!-- #################### -->
+
 ## Installation
 
 1. Install the package:
 ```bash
-sudo dpkg -i ../kamiwaza_0.3.3-1_amd64.deb
-```
+ sudo apt install ./kamiwaza_0.3.3-1_amd64.deb
+ ```
 
 2. If there are missing dependencies:
 ```bash
