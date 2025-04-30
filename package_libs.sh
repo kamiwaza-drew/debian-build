@@ -1,7 +1,8 @@
 #!/bin/bash
 # Script to download all required Python wheels and .deb packages for offline installation
 
-set -e
+# Remove set -e to prevent silent failures
+# set -e
 
 
 # Set a variable of the directory of the script
@@ -117,11 +118,19 @@ DEB_PACKAGES=(
     libgirepository-1.0-1
     gobject-introspection
     software-properties-common
-    # Add any other packages you need
 )
 
+
+# To reset:
+# sudo dpkg --purge --force-depends kamiwaza
+# sudo apt-get -f install
+# sudo apt update & sudo  apt upgrade
+
+
 echo "Downloading .deb packages and dependencies..."
-sudo apt-get update
+
+# Then do apt operations
+sudo apt update
 sudo apt install --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
 
 # Move downloaded .deb files to the target directory
