@@ -1,34 +1,42 @@
 Source: kamiwaza
 Section: utils
 Priority: optional
-Maintainer: Kamiwaza Team <support@kamiwaza.ai>
-Build-Depends: debhelper (>= 13)
+Maintainer: Drew Piispanen <drew@kamiwaza.ai>
+Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.6.0
 Homepage: https://kamiwaza.ai
 
 Package: kamiwaza
 Architecture: amd64
-Depends: ${misc:Depends},
-Recommends: 
- python3.10,
- python3.10-dev,
- libpython3.10-dev,
- python3.10-venv,
- python-is-python3,
- docker.io,
- etcd-client,
- golang-cfssl,
- net-tools,
- jq,
- apt-transport-https,
- ca-certificates,
- curl,
- software-properties-common,
- libcairo2-dev,
- libgirepository1.0-dev
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    python3.10,
+    python3.10-venv,
+    python3.10-dev,
+    libpython3.10-dev,
+    golang-cfssl,
+    python-is-python3,
+    etcd-client,
+    net-tools,
+    build-essential,
+    jq,
+    pkg-config,
+    libcairo2-dev,
+    python3-dev,
+    libgirepository1.0-dev,
+    python3-gi,
+    gir1.2-gtk-3.0,
+    libgirepository-1.0-1,
+    gobject-introspection,
+    software-properties-common
 Suggests: nvidia-driver-550-server,
  nvidia-container-toolkit,
  nvidia-docker2
-Description: Kamiwaza AI Platform
- Kamiwaza is an AI platform that provides various AI services and tools.
- This package includes all necessary dependencies and installation scripts. 
+Description: Kamiwaza Installation Package
+ This package installs and configures Kamiwaza and all its dependencies.
+ It includes:
+  * Kamiwaza Deploy repository
+  * Kamiwaza Core repository
+  * CockroachDB
+  * Node.js
+  * Python dependencies
+  * CUDA support libraries 

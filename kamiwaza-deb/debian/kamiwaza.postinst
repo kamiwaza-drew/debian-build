@@ -201,6 +201,15 @@ fi
 # DREW NOTE: Prepare permissions prior to extraction
 # Devs should have the SSH keys, and the version number of the kamiwaza to download
 # BEFORE: script should clone the repo
+# REQUIREMENTS should be packaged into a wheel
+
+# 1. Pull the repos
+# 2. Package requirements into a wheel
+# 3. Update linux distro requirements
+# 4. Package the whole thing into a deb
+# 5. Build the deb
+
+
 
 echo "Downloading $TAR_FILE from $TAR_URL..."
 wget "$TAR_URL"
@@ -335,4 +344,56 @@ exit 0
 #     fi
 # done
 
-echo "If you encounter broken packages, please run: sudo apt install -f" 
+echo "If you encounter broken packages, please run: sudo apt install -f"
+
+case "$1" in
+    configure)
+        # Create necessary directories
+        mkdir -p /opt/kamiwaza
+        mkdir -p /opt/kamiwaza/venv
+
+        # Extract GitHub repositories
+        tar -xzf /usr/share/kamiwaza/kamiwaza-deploy.tar.gz -C /opt/kamiwaza/
+        tar -xzf /usr/share/kamiwaza/kamiwaza.tar.gz -C /opt/kamiwaza/kamiwaza-deploy/
+
+        # Install CockroachDB
+        tar -xzf /usr/share/kamiwaza/cockroach-v24.1.0.linux-amd64.tgz -C /opt/kamiwaza/
+        ln -sf /opt/kamiwaza/cockroach-v24.1.0.linux-amd64/cockroach /usr/local/bin/cockroach
+
+        # Install Node.js
+        tar -xf /usr/share/kamiwaza/node-v18.20.3-linux-x64.tar.xz -C /opt/kamiwaza/
+        ln -sf /opt/kamiwaza/node-v18.20.3-linux-x64/bin/node /usr/local/bin/node
+        ln -sf /opt/kamiwaza/node-v18.20.3-linux-x64/bin/npm /usr/local/bin/npm
+
+        # Install CUDA dependencies
+        dpkg -i /usr/share/kamiwaza/cuda/*.deb || true
+        apt-get -f install -y
+
+        # Set up Python virtual environment
+        python3.10 -m venv /opt/kamiwaza/venv
+        /opt/kamiwaza/venv/bin/pip install --no-index --find-links=/usr/share/kamiwaza/wheels -r /opt/kamiwaza/kamiwaza-deploy/requirements.txt
+
+        # Set permissions
+        chown -R root:root /opt/kamiwaza
+        chmod -R 755 /opt/kamiwaza
+
+        # TODO: Install Kamiwaza
+        # This section will be implemented later
+        # Steps might include:
+        # - Running setup scripts
+        # - Configuring services
+        # - Setting up systemd units
+        # - Additional configuration
+
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0 

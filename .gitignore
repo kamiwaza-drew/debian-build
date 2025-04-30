@@ -5,6 +5,8 @@
 *.dsc
 *.tar.xz
 *.tar.gz
+*.tar.xz.*
+*.tar.gz.*
 
 # Temporary files
 *.swp
@@ -20,4 +22,5 @@ debian/kamiwaza.substvars
 debian/kamiwaza/
 debian/kamiwaza.debhelper.log
 venv/
+kamiwaza-deb/debian/kamiwaza-test/
 kamiwaza-test/

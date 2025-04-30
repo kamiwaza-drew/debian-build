@@ -1,9 +1,0 @@
-#!/bin/sh
-# prerm script for kamiwaza
-
-set -e
-
-# Stop the service before removal
-systemctl stop kamiwaza || true
-
-exit 0 
