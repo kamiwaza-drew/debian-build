@@ -198,6 +198,10 @@ else
     exit 1
 fi
 
+# DREW NOTE: Prepare permissions prior to extraction
+# Devs should have the SSH keys, and the version number of the kamiwaza to download
+# BEFORE: script should clone the repo
+
 echo "Downloading $TAR_FILE from $TAR_URL..."
 wget "$TAR_URL"
 echo "Extracting $TAR_FILE..."
@@ -216,7 +220,6 @@ fi
 # Set permissions
 echo "=== Setting permissions ==="
 chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
-sudo chmod -R 770 $INSTALL_DIR
 
 echo "=== Checking Python 3.10 installation ==="
 # Check for Python 3.10

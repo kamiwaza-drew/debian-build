@@ -610,6 +610,11 @@ if [ -f llamacpp.commit ] ; then
 fi
 
 print_in_color none "### Running Kamiwaza install.py..."
+print_in_color none "Making sure we are in the right directory ( $(pwd) ) and that venv is activated ( $(VIRTUAL_ENV:-) )"
+if [ -d "./venv" ]; then
+    source ./venv/bin/activate
+fi
+
 python install.py
 if [ $? -ne 0 ]; then
     print_in_color red "Kamiwaza install.py failed. Exiting."

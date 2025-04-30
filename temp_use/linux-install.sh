@@ -215,6 +215,11 @@ install_dependencies() {
             pkg-config
             libcairo2-dev
             python3-dev
+            libgirepository1.0-dev
+            python3-gi
+            gir1.2-gtk-3.0
+            libgirepository-1.0-1
+            gobject-introspection
         )
 
         for pkg in "${REQUIRED_PACKAGES[@]}"; do
