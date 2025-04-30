@@ -1,0 +1,7 @@
+# Kamiwaza Community Edition Environment
+export KAMIWAZA_CLUSTER_MEMBER=true
+export KAMIWAZA_INSTALL_ROOT=/opt/kamiwaza
+export KAMIWAZA_SWARM_HEAD=true
+export KAMIWAZA_ORIG_NODE_TYPE=head
+export KAMIWAZA_HEAD_IP=35.232.37.182
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
