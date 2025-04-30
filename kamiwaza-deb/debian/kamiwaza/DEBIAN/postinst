@@ -216,6 +216,7 @@ fi
 # Set permissions
 echo "=== Setting permissions ==="
 chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
+sudo chmod -R 770 $INSTALL_DIR
 
 echo "=== Checking Python 3.10 installation ==="
 # Check for Python 3.10
