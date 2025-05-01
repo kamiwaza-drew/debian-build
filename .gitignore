@@ -1,0 +1,28 @@
+# Debian package build artifacts
+*.deb
+*.buildinfo
+*.changes
+*.dsc
+*.tar.xz
+*.tar.gz
+*.tar.xz.*
+*.tar.gz.*
+
+# Temporary files
+*.swp
+*~
+.DS_Store
+
+# Build directories and files
+temp-build/
+debian/files
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/kamiwaza.substvars
+debian/kamiwaza/
+debian/kamiwaza.debhelper.log
+venv/
+kamiwaza-deb/debian/kamiwaza-test/
+kamiwaza-test/
+kamiwaza-deb/debian/kamiwaza/usr/
+kamiwaza-deb/debian/kamiwaza/

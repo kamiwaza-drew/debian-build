@@ -1,0 +1,6 @@
+kamiwaza-test/offline_python_wheels/*.whl usr/share/kamiwaza/wheels/
+kamiwaza-test/offline_debs/archives/*.deb usr/share/kamiwaza/debs/
+kamiwaza-test/offline_cockroach/*.tgz usr/share/kamiwaza/
+kamiwaza-test/offline_cuda/*.deb usr/share/kamiwaza/cuda/
+kamiwaza-test/offline_nodejs/*.tar.xz usr/share/kamiwaza/
+kamiwaza-test/kamiwaza-deploy usr/share/kamiwaza/kamiwaza-deploy.tar.gz

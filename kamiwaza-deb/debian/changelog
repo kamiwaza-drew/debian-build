@@ -1,0 +1,8 @@
+kamiwaza (0.3.3-1) unstable; urgency=medium
+
+  * Initial release of Kamiwaza Debian package
+  * Includes all necessary dependencies and installation scripts
+  * Supports both Linux and macOS installations
+  * Automates the installation process as described in INSTALL.md
+
+ -- Kamiwaza Team <support@kamiwaza.ai>  Sun, 27 Apr 2025 12:00:00 +0000

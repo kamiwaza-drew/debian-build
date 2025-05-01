@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Create necessary directories
+	mkdir -p debian/kamiwaza/opt/kamiwaza
+	mkdir -p debian/kamiwaza/usr/bin
+	mkdir -p debian/kamiwaza/etc/systemd/system
+
+	# Create symlink for the service
+	ln -s /opt/kamiwaza/startup/kamiwazad.sh debian/kamiwaza/usr/bin/kamiwazad 
