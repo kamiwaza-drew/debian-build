@@ -34,7 +34,7 @@ GITHUB_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test"
 if [ ! -d "$GITHUB_DIR" ]; then
     mkdir -p "$GITHUB_DIR"
 else
-    rm -rf "$GITHUB_DIR"
+    sudo rm -rf "$GITHUB_DIR"
 fi
 
 # Directories to store offline packages
@@ -135,7 +135,7 @@ sudo apt install --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PAC
 
 # Move downloaded .deb files to the target directory
 find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
-rm -rf "$DEB_PACKAGES_DIR/archives"
+sudo rm -rf "$DEB_PACKAGES_DIR/archives"
 
 # 3. Download CockroachDB tarball
 echo "Downloading CockroachDB tarball..."
