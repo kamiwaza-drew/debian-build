@@ -28,7 +28,7 @@ log_error() {
 }
 
 
-GITHUB_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/debian/kamiwaza-test"
+GITHUB_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test"
 
 # If github directory does not exist, create it. If it exists, remove it.
 if [ ! -d "$GITHUB_DIR" ]; then
@@ -38,11 +38,11 @@ else
 fi
 
 # Directories to store offline packages
-PYTHON_WHEELS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/debian/kamiwaza-test/offline_python_wheels"
-DEB_PACKAGES_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/debian/kamiwaza-test/offline_debs"
-COCKROACH_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/debian/kamiwaza-test/offline_cockroach"
-CUDA_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/debian/kamiwaza-test/offline_cuda"
-NODEJS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/debian/kamiwaza-test/offline_nodejs"
+PYTHON_WHEELS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_python_wheels"
+DEB_PACKAGES_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_debs"
+COCKROACH_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cockroach"
+CUDA_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cuda"
+NODEJS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_nodejs"
 
 
 mkdir -p "$PYTHON_WHEELS_DIR" "$DEB_PACKAGES_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR"
