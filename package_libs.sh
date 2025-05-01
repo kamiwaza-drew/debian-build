@@ -43,10 +43,10 @@ DEB_PACKAGES_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/off
 COCKROACH_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cockroach"
 CUDA_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cuda"
 NODEJS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_nodejs"
+DOCKER_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_docker"
 
 
-mkdir -p "$PYTHON_WHEELS_DIR" "$DEB_PACKAGES_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR"
-
+mkdir -p "$PYTHON_WHEELS_DIR" "$DEB_PACKAGES_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR" "$DOCKER_DIR"
 
 # Prompt for branch selection
 echo "Select branch to use for kamiwaza-deploy and kamiwaza:"
@@ -149,6 +149,13 @@ wget -O "$CUDA_DIR/libtinfo5_6.4-2_amd64.deb" http://launchpadlibrarian.net/6480
 # 5. Download Node.js tarball (optional, for offline Node.js install)
 echo "Downloading Node.js v18 tarball..."
 curl -L -o "$NODEJS_DIR/node-v18.x-linux-x64.tar.xz" https://nodejs.org/dist/v18.20.3/node-v18.20.3-linux-x64.tar.xz
+
+# 6. Download Docker and Docker Compose .deb files
+echo "Downloading Docker and Docker Compose .deb files..."
+curl -L -o "$DOCKER_DIR/docker-26.0.7.tgz" https://download.docker.com/linux/static/stable/x86_64/docker-26.0.7.tgz
+curl -L -o "$DOCKER_DIR/docker-compose-linux-x86_64" https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-linux-x86_64
+
+
 
 echo "All required files have been downloaded for offline installation."
 # Check if --full flag was passed
