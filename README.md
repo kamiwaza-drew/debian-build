@@ -17,9 +17,9 @@ This repository contains the Debian packaging files for Kamiwaza AI Platform. Th
 - sudo privileges
 
 <!-- #################### -->
-<!-- BUILD / COMPILE SIDE -->
+<!-- PACKAGING SIDE -->
 <!-- #################### -->
-## Building the Package
+## 1. Packaging the installer
 
 1. Clone the repository:
 ```bash
@@ -49,10 +49,10 @@ The built package will be created in the parent directory as `kamiwaza_0.3.3-1_a
 
 
 <!-- #################### -->
-<!-- INSTALL SIDE -->
+<!-- BUILDING SIDE -->
 <!-- #################### -->
 
-## Installation
+## 2. (Post-Packaging) Installing / Building the Kamiwaza Instance
 
 1. Install the package:
 ```bash
