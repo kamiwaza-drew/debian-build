@@ -4,3 +4,5 @@ kamiwaza-test/offline_cockroach/*.tgz usr/share/kamiwaza/
 kamiwaza-test/offline_cuda/*.deb usr/share/kamiwaza/cuda/
 kamiwaza-test/offline_nodejs/*.tar.xz usr/share/kamiwaza/
 kamiwaza-test/kamiwaza-deploy usr/share/kamiwaza/kamiwaza-deploy.tar.gz
+kamiwaza-test/offline_docker/*.tgz usr/share/kamiwaza/
+kamiwaza-test/offline_docker/docker-compose-linux-x86_64 usr/share/kamiwaza/

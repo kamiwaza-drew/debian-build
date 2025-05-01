@@ -1,17 +1,23 @@
 #!/bin/sh
 # postinst script for kamiwaza
-echo "=== Starting Kamiwaza installation 4 ==="
+echo "=== Starting Kamiwaza installation (offline) ==="
 
 set -e
 
-
-
 sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock /var/lib/apt/lists/lock
-
-
 
 # Version of this package
 PACKAGE_VERSION="0.3.3-1"
+# Ensure /usr/local/bin is in PATH
+export PATH="/usr/local/bin:$PATH"
+
+INSTALL_DIR="/opt/kamiwaza"
+WHEELS_DIR="/usr/share/kamiwaza/wheels"
+DEBS_DIR="/usr/share/kamiwaza/debs"
+CUDA_DIR="/usr/share/kamiwaza/cuda"
+COCKROACH_TGZ="/usr/share/kamiwaza/cockroach-v24.1.0.linux-amd64.tgz"
+NODEJS_TAR="/usr/share/kamiwaza/node-v18.20.3-linux-x64.tar.xz"
+KAMIWAZA_DEPLOY_TAR="/usr/share/kamiwaza/kamiwaza-deploy.tar.gz"
 
 # Function to compare version strings
 version_gt() {
@@ -26,6 +32,14 @@ get_installed_version() {
 echo "Current directory: $(pwd)"
 echo "User: $USER"
 echo "SUDO_USER: $SUDO_USER"
+
+# Create installation directory
+echo "=== Creating installation directory ==="
+INSTALL_DIR="/opt/kamiwaza"
+echo "Installation directory: $INSTALL_DIR"
+mkdir -p $INSTALL_DIR
+cd $INSTALL_DIR
+echo "Changed to directory: $(pwd)"
 
 # # Check if we're installing an older version
 # INSTALLED_VERSION=$(get_installed_version)
@@ -70,52 +84,11 @@ echo "SUDO_USER: $SUDO_USER"
 #     fi
 # fi
 
-
 # Add deadsnakes PPA for Python if needed
 add-apt-repository -y ppa:deadsnakes/ppa || true
 
 # Update package lists
 apt-get update -y
-
-# Ensure /usr/local/bin is in PATH
-export PATH="/usr/local/bin:$PATH"
-
-# # Install Docker Compose V2 if not present
-# echo "=== Checking/Installing Docker Compose V2 heh ==="
-# if ! docker compose version >/dev/null 2>&1; then
-#     echo "Installing Docker Compose V2..."
-#     # First try package manager
-#     if command -v apt-get >/dev/null 2>&1; then
-#        sudo apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-#     else
-#         # Manual installation as fallback
-#         mkdir -p /usr/local/lib/docker/cli-plugins
-#         curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
-#         chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-#     fi
-    
-#     # Verify installation
-#     if docker compose version >/dev/null 2>&1; then
-#         echo "Docker Compose V2 installed successfully"
-#     else
-#         echo "Error: Docker Compose V2 installation failed"
-#         exit 1
-#     fi
-# fi
-
-# Install CockroachDB if not present
-echo "=== Checking/Installing CockroachDB ==="
-if ! command -v cockroach >/dev/null 2>&1; then
-    echo "Installing CockroachDB..."
-    cd /tmp
-    curl -O https://binaries.cockroachdb.com/cockroach-v24.1.0.linux-amd64.tgz
-    tar xzf cockroach-v24.1.0.linux-amd64.tgz
-    sudo cp -f cockroach-v24.1.0.linux-amd64/cockroach /usr/local/bin/
-    sudo chmod 755 /usr/local/bin/cockroach
-    rm -rf cockroach-v24.1.0.linux-amd64*
-    echo "CockroachDB installed successfully"
-fi
 
 
 # Check for supported distributions
@@ -154,49 +127,8 @@ wait_for_package_lock() {
 # Check distribution
 check_distribution
 
-# # Install required dependencies for PyGObject and PyCairo
-# echo "=== Installing PyGObject and PyCairo dependencies ==="
-# wait_for_package_lock
-
-# if [ "$IS_REDHAT" = true ]; then
-#     # RedHat-based system
-#     sudo yum install -y meson ninja-build cairo-devel pkgconfig python3-devel
-# else
-#     echo "Removing existing kamiwaza installation..."
-#     sudo apt-get remove --purge kamiwaza
-#     echo "Cleaning up package manager..."
-#     sudo apt-get clean
-#     sudo apt-get update 
-#     echo "Installing PyGObject and PyCairo dependencies..."
-#     # Ubuntu
-#     sudo apt install -y meson ninja-build libcairo2-dev pkg-config
-# fi
-
-# echo "PyGObject and PyCairo dependencies installed successfully"
-
-
-# Create installation directory
-echo "=== Creating installation directory ==="
-INSTALL_DIR="/opt/kamiwaza"
-echo "Installation directory: $INSTALL_DIR"
-mkdir -p $INSTALL_DIR
-cd $INSTALL_DIR
-echo "Changed to directory: $(pwd)"
-
-# Download and extract the appropriate tar file
-echo "=== Downloading and extracting files ==="
-if [ "$(uname)" = "Linux" ]; then
-    echo "Linux detected"
-    TAR_FILE="kamiwaza-community-0.3.3-UbuntuLinux.tar.gz"
-    TAR_URL="https://github.com/kamiwaza-ai/kamiwaza-community-edition/raw/refs/heads/main/kamiwaza-community-0.3.3-UbuntuLinux.tar.gz"
-elif [ "$(uname)" = "Darwin" ]; then
-    echo "macOS detected"
-    TAR_FILE="kamiwaza-community-0.3.3-OSX.tar.gz"
-    TAR_URL="https://github.com/kamiwaza-ai/kamiwaza-community-edition/raw/refs/heads/main/kamiwaza-community-0.3.3-OSX.tar.gz"
-else
-    echo "Unsupported operating system: $(uname)"
-    exit 1
-fi
+# DREW ADD PIP AND PYTHON INSTALLATION HERE
+# Also add Updating existing python symlink
 
 # DREW NOTE: Prepare permissions prior to extraction
 # Devs should have the SSH keys, and the version number of the kamiwaza to download
@@ -208,13 +140,6 @@ fi
 # 3. Update linux distro requirements
 # 4. Package the whole thing into a deb
 # 5. Build the deb
-
-
-
-echo "Downloading $TAR_FILE from $TAR_URL..."
-wget "$TAR_URL"
-echo "Extracting $TAR_FILE..."
-tar -xvf $TAR_FILE
 
 # ============= DEV-ONLY: Overwrite extracted files with /home/kamiwaza/temp_use/ =============
 echo "=== [DEV ONLY] Overwriting extracted files with /home/kamiwaza/temp_use/ ==="
@@ -230,170 +155,79 @@ fi
 echo "=== Setting permissions ==="
 chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
 
-echo "=== Checking Python 3.10 installation ==="
-# Check for Python 3.10
-if ! command -v python3.10 >/dev/null 2>&1; then
-    echo "Python 3.10 not found. Installing Python 3.10..."
-    sudo apt-get remove --purge kamiwaza
-    sudo apt-get clean
-    sudo apt-get update
-    sudo apt install -y python3.10 python3.10-dev python3.10-venv libpython3.10-dev
-    if ! command -v python3.10 >/dev/null 2>&1; then
-        echo "Failed to install Python 3.10. Attempting to install from deadsnakes PPA..."
-        add-apt-repository -y ppa:deadsnakes/ppa
-        sudo apt update
-        sudo apt install -y python3.10 python3.10-dev python3.10-venv libpython3.10-dev
-    fi
-    if ! command -v python3.10 >/dev/null 2>&1; then
-        echo "ERROR: Failed to install Python 3.10 after multiple attempts."
-        exit 1
-    fi
-    echo "Python 3.10 installed successfully."
-fi
+# # Make sure 'python' command points to Python 3.10
+# echo "=== Setting up python command to use Python 3.10 ==="
+# if [ -e /usr/bin/python ]; then
+#     echo "Updating existing python symlink..."
+#     rm -f /usr/bin/python
 
-# Ensure pip is installed
-echo "=== Checking pip installation ==="
-if ! command -v pip >/dev/null 2>&1; then
-    echo "Installing pip..."
-    sudo apt install -y python3-pip
-    if ! command -v pip >/dev/null 2>&1; then
-        echo "Failed to install pip through apt. Trying alternative method..."
-        curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-        sudo python3.10 get-pip.py
-        rm get-pip.py
-    fi
-    if ! command -v pip >/dev/null 2>&1; then
-        echo "ERROR: Failed to install pip after multiple attempts."
-        exit 1
-    fi
-    echo "pip installed successfully."
-fi
-
-# Make sure 'python' command points to Python 3.10
-echo "=== Setting up python command to use Python 3.10 ==="
-if [ -e /usr/bin/python ]; then
-    echo "Updating existing python symlink..."
-    rm -f /usr/bin/python
-
-fi
-ln -sf /usr/bin/python3.10 /usr/bin/python
-echo "python now points to $(readlink -f /usr/bin/python)"
-
-
-# # Create virtual environment as the user (if needed)
-# if [ ! -d "$INSTALL_DIR/venv" ]; then
-#     echo "Creating Python virtual environment as $SUDO_USER..."
-#     sudo -u $SUDO_USER python3.10 -m venv "$INSTALL_DIR/venv"
 # fi
-# # Activate and install requirements as the user
-# sudo -u $SUDO_USER bash -c "source $INSTALL_DIR/venv/bin/activate && pip install -r $INSTALL_DIR/requirements.txt"
+# ln -sf /usr/bin/python3.10 /usr/bin/python
+# echo "python now points to $(readlink -f /usr/bin/python)"
 
-# Create startup script
-echo "=== Creating startup script ==="
-cat > /etc/systemd/system/kamiwaza.service << EOF
-[Unit]
-Description=Kamiwaza Service
-After=network.target
+echo "=== Creating installation directory ==="
+mkdir -p "$INSTALL_DIR"
 
-[Service]
-Type=simple
-User=$SUDO_USER
-WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/kamiwazad start
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Find and run the installation script
-echo "=== Looking for installation script ==="
-cd $INSTALL_DIR
-echo "Changed to directory: $(pwd)"
-echo "USER: $USER"
-echo "SUDO_USER: $SUDO_USER"
-if [ -f "install.sh" ]; then
-    echo "Running install.sh with community and license acceptance flags as USER $SUDO_USER..."
-    sudo -u $SUDO_USER bash install.sh --community --i-accept-the-kamiwaza-license
+echo "=== Extracting kamiwaza-deploy repo ==="
+if [ -f "$KAMIWAZA_DEPLOY_TAR" ]; then
+    tar -xzf "$KAMIWAZA_DEPLOY_TAR" -C "$INSTALL_DIR" --strip-components=1
 else
-    echo "Error: install.sh not found in $(pwd)"
+    echo "ERROR: $KAMIWAZA_DEPLOY_TAR not found!"
     exit 1
 fi
 
-# Reload systemd and handle service
-echo "=== Setting up service ==="
-systemctl daemon-reload
-systemctl enable kamiwaza
-systemctl start kamiwaza
+echo "=== Extracting CockroachDB ==="
+if [ -f "$COCKROACH_TGZ" ]; then
+    tar -xzf "$COCKROACH_TGZ" -C "$INSTALL_DIR"
+    ln -sf "$INSTALL_DIR/cockroach-v24.1.0.linux-amd64/cockroach" /usr/local/bin/cockroach
+else
+    echo "WARNING: $COCKROACH_TGZ not found, skipping CockroachDB extraction."
+fi
 
-echo "=== Installation complete! ==="
-exit 0
+echo "=== Extracting Node.js ==="
+if [ -f "$NODEJS_TAR" ]; then
+    tar -xf "$NODEJS_TAR" -C "$INSTALL_DIR"
+    NODEJS_DIR=$(tar -tf "$NODEJS_TAR" | head -1 | cut -f1 -d"/")
+    if [ -d "$INSTALL_DIR/$NODEJS_DIR/bin" ]; then
+        ln -sf "$INSTALL_DIR/$NODEJS_DIR/bin/node" /usr/local/bin/node
+        ln -sf "$INSTALL_DIR/$NODEJS_DIR/bin/npm" /usr/local/bin/npm
+    fi
+else
+    echo "WARNING: $NODEJS_TAR not found, skipping Node.js extraction."
+fi
 
-# REQUIRED_PACKAGES="golang-cfssl etcd-client net-tools jq libcairo2-dev libgirepository1.0-dev"
-# RECOMMENDED_PACKAGES="nvidia-driver-550-server nvidia-container-toolkit nvidia-docker2"
+echo "=== Installing CUDA .deb files ==="
+if [ -d "$CUDA_DIR" ]; then
+    dpkg -i "$CUDA_DIR"/*.deb || apt-get -f install -y
+else
+    echo "WARNING: $CUDA_DIR not found, skipping CUDA .deb install."
+fi
 
-# for pkg in $REQUIRED_PACKAGES; do
-#     if ! dpkg -s $pkg >/dev/null 2>&1; then
-#         sudo apt install -y $pkg || echo "WARNING: Failed to install $pkg"
-#     fi
-# done
+echo "=== Installing other .deb files ==="
+if [ -d "$DEBS_DIR" ]; then
+    dpkg -i "$DEBS_DIR"/*.deb || apt-get -f install -y
+else
+    echo "WARNING: $DEBS_DIR not found, skipping .deb install."
+fi
 
-# for pkg in $RECOMMENDED_PACKAGES; do
-#     if ! dpkg -s $pkg >/dev/null 2>&1; then
-#         sudo apt install -y $pkg || echo "WARNING: Failed to install recommended $pkg"
-#     fi
-# done
+echo "=== Ensuring Python 3.10 and pip are installed ==="
+if ! command -v python3.10 >/dev/null 2>&1; then
+    echo "ERROR: Python 3.10 is required but not installed."
+    exit 1
+fi
+if ! command -v pip3 >/dev/null 2>&1; then
+    echo "pip3 not found, installing..."
+    apt-get update && apt-get install -y python3-pip
+fi
 
-echo "If you encounter broken packages, please run: sudo apt install -f"
+echo "=== Creating Python virtual environment ==="
+python3.10 -m venv "$INSTALL_DIR/.venv"
+"$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
+"$INSTALL_DIR/.venv/bin/pip" install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
 
-case "$1" in
-    configure)
-        # Create necessary directories
-        mkdir -p /opt/kamiwaza
-        mkdir -p /opt/kamiwaza/venv
+echo "=== Setting permissions ==="
+chown -R root:root "$INSTALL_DIR"
+chmod -R 755 "$INSTALL_DIR"
 
-        # Extract GitHub repositories
-        tar -xzf /usr/share/kamiwaza/kamiwaza-deploy.tar.gz -C /opt/kamiwaza/
-        tar -xzf /usr/share/kamiwaza/kamiwaza.tar.gz -C /opt/kamiwaza/kamiwaza-deploy/
-
-        # Install CockroachDB
-        tar -xzf /usr/share/kamiwaza/cockroach-v24.1.0.linux-amd64.tgz -C /opt/kamiwaza/
-        ln -sf /opt/kamiwaza/cockroach-v24.1.0.linux-amd64/cockroach /usr/local/bin/cockroach
-
-        # Install Node.js
-        tar -xf /usr/share/kamiwaza/node-v18.20.3-linux-x64.tar.xz -C /opt/kamiwaza/
-        ln -sf /opt/kamiwaza/node-v18.20.3-linux-x64/bin/node /usr/local/bin/node
-        ln -sf /opt/kamiwaza/node-v18.20.3-linux-x64/bin/npm /usr/local/bin/npm
-
-        # Install CUDA dependencies
-        dpkg -i /usr/share/kamiwaza/cuda/*.deb || true
-        apt-get -f install -y
-
-        # Set up Python virtual environment
-        python3.10 -m venv /opt/kamiwaza/venv
-        /opt/kamiwaza/venv/bin/pip install --no-index --find-links=/usr/share/kamiwaza/wheels -r /opt/kamiwaza/kamiwaza-deploy/requirements.txt
-
-        # Set permissions
-        chown -R root:root /opt/kamiwaza
-        chmod -R 755 /opt/kamiwaza
-
-        # TODO: Install Kamiwaza
-        # This section will be implemented later
-        # Steps might include:
-        # - Running setup scripts
-        # - Configuring services
-        # - Setting up systemd units
-        # - Additional configuration
-
-        ;;
-
-    abort-upgrade|abort-remove|abort-deconfigure)
-        ;;
-
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-        ;;
-esac
-
+echo "=== Kamiwaza offline installation complete! ==="
 exit 0 
