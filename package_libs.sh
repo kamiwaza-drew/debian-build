@@ -34,7 +34,7 @@ GITHUB_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test"
 if [ ! -d "$GITHUB_DIR" ]; then
     mkdir -p "$GITHUB_DIR"
 else
-    rm -rf "$GITHUB_DIR"
+    sudo rm -rf "$GITHUB_DIR"
 fi
 
 # Directories to store offline packages
@@ -129,13 +129,11 @@ DEB_PACKAGES=(
 
 echo "Downloading .deb packages and dependencies..."
 
-# Then do apt operations
 sudo apt update
 sudo apt install --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
-
-# Move downloaded .deb files to the target directory
-find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
-rm -rf "$DEB_PACKAGES_DIR/archives"
+sudo find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
+sudo rm -rf "$DEB_PACKAGES_DIR/archives"
+sudo chown -R $USER:$USER "$DEB_PACKAGES_DIR"
 
 # 3. Download CockroachDB tarball
 echo "Downloading CockroachDB tarball..."
@@ -156,17 +154,69 @@ curl -L -o "$DOCKER_DIR/docker-26.0.7.tgz" https://download.docker.com/linux/sta
 curl -L -o "$DOCKER_DIR/docker-compose-linux-x86_64" https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-linux-x86_64
 
 
+# ############################## START VERIFICATION
+# 7. Verify all required files are present
+echo "Verifying all required files are present..."
+# Check Python wheels
+if [ ! "$(ls -A "$PYTHON_WHEELS_DIR"/*.whl 2>/dev/null)" ]; then
+    log_error "ERROR: No Python wheels found in $PYTHON_WHEELS_DIR"
+    exit 1
+fi
 
-echo "All required files have been downloaded for offline installation."
+# Check deb packages
+if [ ! "$(ls -A "$DEB_PACKAGES_DIR"/*.deb 2>/dev/null)" ]; then
+    log_error "ERROR: No deb packages found in $DEB_PACKAGES_DIR"
+    exit 1
+fi
+
+# Check CockroachDB
+if [ ! -f "$COCKROACH_DIR/cockroach-v24.1.0.linux-amd64.tgz" ]; then
+    log_error "ERROR: CockroachDB tarball not found at $COCKROACH_DIR/cockroach-v24.1.0.linux-amd64.tgz"
+    exit 1
+fi
+
+# Check CUDA packages
+if [ ! "$(ls -A "$CUDA_DIR"/*.deb 2>/dev/null)" ]; then
+    log_error "ERROR: No CUDA packages found in $CUDA_DIR"
+    exit 1
+fi
+
+# Check Node.js
+if [ ! -f "$NODEJS_DIR/node-v18.x-linux-x64.tar.xz" ]; then
+    log_error "ERROR: Node.js tarball not found at $NODEJS_DIR/node-v18.x-linux-x64.tar.xz"
+    exit 1
+fi
+
+# Check Docker files
+if [ ! -f "$DOCKER_DIR/docker-26.0.7.tgz" ]; then
+    log_error "ERROR: Docker tarball not found at $DOCKER_DIR/docker-26.0.7.tgz"
+    exit 1
+fi
+
+if [ ! -f "$DOCKER_DIR/docker-compose-linux-x86_64" ]; then
+    log_error "ERROR: Docker Compose binary not found at $DOCKER_DIR/docker-compose-linux-x86_64"
+    exit 1
+fi
+
+# Check kamiwaza-deploy tarball
+if [ ! -d "$GITHUB_DIR/kamiwaza-deploy" ]; then
+    log_error "ERROR: kamiwaza-deploy folder not found at $GITHUB_DIR/kamiwaza-deploy"
+    exit 1
+fi
+# ############################## END VERIFICATION
+
+
+
+log_info "All required files have been downloaded for offline installation."
 # Check if --full flag was passed
 if [[ "$*" == *"--full"* ]]; then
     PACKAGE_CHOICE="y"
 else
     # Add a yes or no to package the files into a deb package
-    read -p "Do you want to package the files into a deb package? (y/n): " PACKAGE_CHOICE
+    read -p "Do you want to package the files into a deb package? (Y/n): " PACKAGE_CHOICE
 fi
 
-if [ "$PACKAGE_CHOICE" = "y" ]; then
+if [ "$PACKAGE_CHOICE" != "n" ]; then
     cd "$GITHUB_DIR"
     cd ..
     echo "Packaging the files into a deb package..."
