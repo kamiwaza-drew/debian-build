@@ -26,3 +26,4 @@ kamiwaza-deb/debian/kamiwaza-test/
 kamiwaza-test/
 kamiwaza-deb/debian/kamiwaza/usr/
 kamiwaza-deb/debian/kamiwaza/
+kamiwaza-deb/debian/.debhelper/

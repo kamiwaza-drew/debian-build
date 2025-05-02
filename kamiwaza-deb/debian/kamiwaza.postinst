@@ -1,8 +1,67 @@
 #!/bin/sh
 # postinst script for kamiwaza
-echo "=== Starting Kamiwaza installation (offline) ==="
 
 set -e
+
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Log functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+# Initialize variables for tracking installation progress
+START_TIME=$(date +%s)
+TOTAL_STEPS=10  # Total number of major installation steps
+CURRENT_STEP=0
+
+# Function to update and display progress
+update_progress() {
+    local step_name="$1"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    local percentage=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+    local current_time=$(date +%s)
+    local elapsed_time=$((current_time - START_TIME))
+    local elapsed_minutes=$((elapsed_time / 60))
+    local elapsed_seconds=$((elapsed_time % 60))
+    
+    echo "┌────────────────────────────────────────────────────────────┐"
+    echo "│ Progress: [$percentage%] Step $CURRENT_STEP/$TOTAL_STEPS: $step_name"
+    echo "│ Time elapsed: ${elapsed_minutes}m ${elapsed_seconds}s"
+    echo "└────────────────────────────────────────────────────────────┘"
+}
+
+
+log_info "================================================="
+log_info "================================================="
+log_info "================================================="
+log_info "===== Starting Kamiwaza Offline Installation ===="
+log_info "================================================="
+log_info "================================================="
+log_info "================================================="
+
+# if running as root, print a warning (but do not exit)
+if [ "$EUID" -eq 0 ]; then
+    log_warn "This script is running as root. It is recommended to run as a regular user with sudo privileges."
+fi
+
+# Check if sudo is available
+if ! command -v sudo >/dev/null 2>&1; then
+    log_error "sudo is required but not installed. Please install sudo or run this script as root."
+    exit 1
+fi
 
 sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock /var/lib/apt/lists/lock
 
@@ -12,12 +71,15 @@ PACKAGE_VERSION="0.3.3-1"
 export PATH="/usr/local/bin:$PATH"
 
 INSTALL_DIR="/opt/kamiwaza"
-WHEELS_DIR="/usr/share/kamiwaza/wheels"
-DEBS_DIR="/usr/share/kamiwaza/debs"
-CUDA_DIR="/usr/share/kamiwaza/cuda"
-COCKROACH_TGZ="/usr/share/kamiwaza/cockroach-v24.1.0.linux-amd64.tgz"
-NODEJS_TAR="/usr/share/kamiwaza/node-v18.20.3-linux-x64.tar.xz"
-KAMIWAZA_DEPLOY_TAR="/usr/share/kamiwaza/kamiwaza-deploy.tar.gz"
+WHEELS_DIR="/usr/share/kamiwaza/offline_python_wheels"
+DEBS_DIR="/usr/share/kamiwaza/offline_debs"
+CUDA_DIR="/usr/share/kamiwaza/offline_cuda"
+COCKROACH_TGZ="/usr/share/kamiwaza/offline_cockroach/cockroach-v24.1.0.linux-amd64.tgz"
+NODEJS_TAR="/usr/share/kamiwaza/offline_nodejs/node-v18.x-linux-x64.tar.xz"
+KAMIWAZA_DEPLOY_TAR="/usr/share/kamiwaza/kamiwaza-deploy/kamiwaza-deploy.tar.gz"
+DOCKER_COMPOSE_PATH="/usr/share/kamiwaza/offline_docker/docker-compose-linux-x86_64"
+DOCKER_TAR="/usr/share/kamiwaza/offline_docker/docker-25.0.3.tgz"
+
 
 # Function to compare version strings
 version_gt() {
@@ -32,14 +94,95 @@ get_installed_version() {
 echo "Current directory: $(pwd)"
 echo "User: $USER"
 echo "SUDO_USER: $SUDO_USER"
+update_progress "Initializing installation"
 
 # Create installation directory
 echo "=== Creating installation directory ==="
 INSTALL_DIR="/opt/kamiwaza"
 echo "Installation directory: $INSTALL_DIR"
+sudo chown -R $USER:$USER /opt
 mkdir -p $INSTALL_DIR
 cd $INSTALL_DIR
 echo "Changed to directory: $(pwd)"
+sudo chown -R $USER:$USER /opt/kamiwaza
+sudo chown -R $USER:$USER /usr/share/kamiwaza
+
+# Extract /usr/share/kamiwaza/kamiwaza-deploy/kamiwaza-deploy.tar.gz to /opt/kamiwaza/
+echo "=== Extracting kamiwaza-deploy ==="
+tar -xzf /usr/share/kamiwaza/kamiwaza-deploy/kamiwaza-deploy.tar.gz -C $INSTALL_DIR
+
+# Add the virtual environment to the installation directory
+echo "=== Adding virtual environment ==="
+python3.10 -m venv $INSTALL_DIR/.venv
+
+# Install the pip requirements
+update_progress "Installing pip requirements"
+echo "=== Installing pip requirements ==="
+$INSTALL_DIR/.venv/bin/pip install --upgrade pip
+$INSTALL_DIR/.venv/bin/pip install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
+
+# Install the docker-compose.tar.gz to /opt/kamiwaza/
+update_progress "Installing docker-compose"
+echo "=== Installing docker-compose ==="
+cp $DOCKER_COMPOSE_PATH $INSTALL_DIR/docker-compose
+chmod +x $INSTALL_DIR/docker-compose
+
+# Install the docker.tar.gz to /opt/kamiwaza/
+update_progress "Installing docker"
+echo "=== Installing docker ==="
+tar -xzf $DOCKER_TAR -C $INSTALL_DIR
+
+
+# Install the node-v18.x-linux-x64.tar.xz to /opt/kamiwaza/
+update_progress "Installing node"
+echo "=== Installing node ==="
+
+tar -xf $NODEJS_TAR -C $INSTALL_DIR
+
+# Install the cockroach-v24.1.0.linux-amd64.tgz to /opt/kamiwaza/
+update_progress "Installing cockroach"
+echo "=== Installing cockroach ==="
+tar -xzf $COCKROACH_TGZ -C $INSTALL_DIR
+sudo ln -sf "$INSTALL_DIR/cockroach-v24.1.0.linux-amd64/cockroach" /usr/local/bin/cockroach
+
+# Install the debs
+update_progress "Installing debs"
+echo "=== Installing debs ==="
+sudo dpkg -i /usr/share/kamiwaza/offline_debs/*.deb
+
+
+# Set permissions
+echo "=== Setting permissions ==="
+sudo chown -R $USER:$USER $INSTALL_DIR
+
+
+# if there's no env.sh in the installation directory, make one: 
+echo "=== Creating env.sh ==="
+if [ ! -f "$INSTALL_DIR/env.sh" ]; then
+    cat <<EOF > "$INSTALL_DIR/env.sh"
+# Kamiwaza Community Edition Environment
+# Kamiwaza Community Edition Environment
+export KAMIWAZA_CLUSTER_MEMBER=true
+export KAMIWAZA_INSTALL_ROOT=/opt/kamiwaza
+export KAMIWAZA_SWARM_HEAD=true
+export KAMIWAZA_ORIG_NODE_TYPE=head
+export KAMIWAZA_RUN_FROM_INSTALL='yes'
+export KAMIWAZA_HEAD_IP=$(hostname -I | awk '{print $1}')
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+EOF
+    echo "env.sh created in $INSTALL_DIR"
+else
+    echo "env.sh already exists in $INSTALL_DIR"
+fi
+
+
+
+
+
+
+
+
+
 
 # # Check if we're installing an older version
 # INSTALLED_VERSION=$(get_installed_version)
@@ -85,10 +228,10 @@ echo "Changed to directory: $(pwd)"
 # fi
 
 # Add deadsnakes PPA for Python if needed
-add-apt-repository -y ppa:deadsnakes/ppa || true
+sudo add-apt-repository -y ppa:deadsnakes/ppa || true
 
 # Update package lists
-apt-get update -y
+sudo apt-get update -y
 
 
 # Check for supported distributions
@@ -153,7 +296,7 @@ fi
 
 # Set permissions
 echo "=== Setting permissions ==="
-chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
+sudo chown -R $USER:$USER $INSTALL_DIR
 
 # # Make sure 'python' command points to Python 3.10
 # echo "=== Setting up python command to use Python 3.10 ==="
@@ -172,16 +315,16 @@ echo "=== Extracting kamiwaza-deploy repo ==="
 if [ -f "$KAMIWAZA_DEPLOY_TAR" ]; then
     tar -xzf "$KAMIWAZA_DEPLOY_TAR" -C "$INSTALL_DIR" --strip-components=1
 else
-    echo "ERROR: $KAMIWAZA_DEPLOY_TAR not found!"
+    log_error "ERROR: $KAMIWAZA_DEPLOY_TAR not found!"
     exit 1
 fi
 
 echo "=== Extracting CockroachDB ==="
 if [ -f "$COCKROACH_TGZ" ]; then
     tar -xzf "$COCKROACH_TGZ" -C "$INSTALL_DIR"
-    ln -sf "$INSTALL_DIR/cockroach-v24.1.0.linux-amd64/cockroach" /usr/local/bin/cockroach
+    sudo ln -sf "$INSTALL_DIR/cockroach-v24.1.0.linux-amd64/cockroach" /usr/local/bin/cockroach
 else
-    echo "WARNING: $COCKROACH_TGZ not found, skipping CockroachDB extraction."
+    log_warn "WARNING: $COCKROACH_TGZ not found, skipping CockroachDB extraction."
 fi
 
 echo "=== Extracting Node.js ==="
@@ -189,34 +332,39 @@ if [ -f "$NODEJS_TAR" ]; then
     tar -xf "$NODEJS_TAR" -C "$INSTALL_DIR"
     NODEJS_DIR=$(tar -tf "$NODEJS_TAR" | head -1 | cut -f1 -d"/")
     if [ -d "$INSTALL_DIR/$NODEJS_DIR/bin" ]; then
-        ln -sf "$INSTALL_DIR/$NODEJS_DIR/bin/node" /usr/local/bin/node
-        ln -sf "$INSTALL_DIR/$NODEJS_DIR/bin/npm" /usr/local/bin/npm
+        sudo ln -sf "$INSTALL_DIR/$NODEJS_DIR/bin/node" /usr/local/bin/node
+        sudo ln -sf "$INSTALL_DIR/$NODEJS_DIR/bin/npm" /usr/local/bin/npm
     fi
 else
-    echo "WARNING: $NODEJS_TAR not found, skipping Node.js extraction."
+    log_warn "WARNING: $NODEJS_TAR not found, skipping Node.js extraction."
 fi
 
 echo "=== Installing CUDA .deb files ==="
 if [ -d "$CUDA_DIR" ]; then
-    dpkg -i "$CUDA_DIR"/*.deb || apt-get -f install -y
+    # Check if there are any .deb files in the directory
+    if ls "$CUDA_DIR"/*.deb >/dev/null 2>&1; then
+        sudo dpkg -i "$CUDA_DIR"/*.deb || sudo apt-get -f install -y
+    else
+        log_warn "WARNING: No .deb files found in $CUDA_DIR, skipping CUDA .deb install."
+    fi
 else
-    echo "WARNING: $CUDA_DIR not found, skipping CUDA .deb install."
+    log_warn "WARNING: $CUDA_DIR not found, skipping CUDA .deb install."
 fi
 
 echo "=== Installing other .deb files ==="
 if [ -d "$DEBS_DIR" ]; then
-    dpkg -i "$DEBS_DIR"/*.deb || apt-get -f install -y
+    sudo dpkg -i "$DEBS_DIR"/*.deb || sudo apt-get -f install -y
 else
-    echo "WARNING: $DEBS_DIR not found, skipping .deb install."
+    log_warn "WARNING: $DEBS_DIR not found, skipping .deb install."
 fi
 
 echo "=== Ensuring Python 3.10 and pip are installed ==="
 if ! command -v python3.10 >/dev/null 2>&1; then
-    echo "ERROR: Python 3.10 is required but not installed."
+    log_error "ERROR: Python 3.10 is required but not installed."
     exit 1
 fi
 if ! command -v pip3 >/dev/null 2>&1; then
-    echo "pip3 not found, installing..."
+    log_info "pip3 not found, installing..."
     apt-get update && apt-get install -y python3-pip
 fi
 
@@ -226,15 +374,21 @@ python3.10 -m venv "$INSTALL_DIR/.venv"
 "$INSTALL_DIR/.venv/bin/pip" install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
 
 echo "=== Setting permissions ==="
-chown -R root:root "$INSTALL_DIR"
-chmod -R 755 "$INSTALL_DIR"
+sudo chown -R root:root "$INSTALL_DIR"
+sudo chmod -R 755 "$INSTALL_DIR"
 
 
 
+cd $INSTALL_DIR
+update_progress "=== Installing kamiwaza Python Dependencies ==="
+source env.sh
+source common.sh
+update_progress "=== Installing kamiwaza Setup Script ==="
+bash setup.sh
 
 
 
-
-
-echo "=== Kamiwaza offline installation complete! ==="
+log_info "================================================="
+log_info "=== Kamiwaza offline installation complete! ==="
+log_info "================================================="
 exit 0 
