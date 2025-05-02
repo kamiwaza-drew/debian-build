@@ -3,6 +3,7 @@
 
 # Remove set -e to prevent silent failures
 # set -e
+
 # Remove any old lock files from all relevant locations
 rm -f .packaging.lock
 rm -f kamiwaza-deb/.packaging.lock
@@ -85,153 +86,127 @@ DOCKER_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_d
 
 
 mkdir -p "$PYTHON_WHEELS_DIR" "$DEB_PACKAGES_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR" "$DOCKER_DIR"
-rm -f "$DEB_PACKAGES_DIR"/*.deb
-# Prompt for branch selection
-echo "Select branch to use for kamiwaza-deploy and kamiwaza:"
-echo "1) main (default)"
-echo "2) develop"
-read -p "Enter your choice (1 or 2): " BRANCH_CHOICE
 
-if [ "$BRANCH_CHOICE" = "2" ]; then
-    GIT_BRANCH="develop"
-else
-    GIT_BRANCH="main"
-fi
+# # Prompt for branch selection
+# echo "Select branch to use for kamiwaza-deploy and kamiwaza:"
+# echo "1) main (default)"
+# echo "2) develop"
+# read -p "Enter your choice (1 or 2): " BRANCH_CHOICE
+
+# if [ "$BRANCH_CHOICE" = "2" ]; then
+#     GIT_BRANCH="develop"
+# else
+#     GIT_BRANCH="main"
+# fi
 
 
 # ############################## START CLONING REPOSITORIES
 # Clone the Kamiwaza Deploy repository
-log_info "Cloning Kamiwaza Deploy repository..."
-cd "$GITHUB_DIR"
-# Remove existing kamiwaza-deploy directory if it exists
-if [ -d "kamiwaza-deploy" ]; then
-    log_info "Removing existing Kamiwaza Deploy repository."
-    rm -rf "kamiwaza-deploy"
-fi
-
-# Clone the repository fresh every time
-log_info "Cloning Kamiwaza Deploy repository from branch $GIT_BRANCH..."
-git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza-deploy.git
+# log_info "Cloning Kamiwaza Deploy repository..."
+# cd "$GITHUB_DIR"
+# if [ ! -d "kamiwaza-deploy" ]; then
+#     git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza-deploy.git
+# else
+#     log_info "Kamiwaza Deploy repository already exists. Checking out branch $GIT_BRANCH."
+#     cd kamiwaza-deploy
+#     git fetch origin
+#     git checkout "$GIT_BRANCH" || git checkout -b "$GIT_BRANCH" origin/"$GIT_BRANCH"
+#     git pull origin "$GIT_BRANCH"
+#     cd "$GITHUB_DIR"
+# fi
 
 # Clone the Kamiwaza repository inside kamiwaza-deploy
-log_info "Cloning Kamiwaza Core repository..."
-cd "$GITHUB_DIR"/kamiwaza-deploy
-# Remove existing kamiwaza directory if it exists
-if [ -d "kamiwaza" ]; then
-    rm -rf "kamiwaza"
-fi
-
-# Clone the repository fresh every time
-git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza.git
+# log_info "Cloning Kamiwaza Core repository..."
+# cd "$GITHUB_DIR"/kamiwaza-deploy
+# if [ ! -d "kamiwaza" ]; then
+#     git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza.git
+# else
+#     log_info "Kamiwaza Core repository already exists. Checking out branch $GIT_BRANCH."
+#     cd kamiwaza
+#     git fetch origin
+#     git checkout "$GIT_BRANCH" || git checkout -b "$GIT_BRANCH" origin/"$GIT_BRANCH"
+#     git pull origin "$GIT_BRANCH"
+#     cd "$GITHUB_DIR"/kamiwaza-deploy
+# fi
 
 # Now create a tar.gz archive of kamiwaza-deploy
-log_info "Creating kamiwaza-deploy archive..."
-
-# First, create a temporary copy of kamiwaza-deploy to archive
-cd "$GITHUB_DIR"
-cp -r kamiwaza-deploy kamiwaza-deploy-source
- git pull origin "$GIT_BRANCH"
-cd "$GITHUB_DIR"/kamiwaza-deploy
-# Create the archive in the correct location
-cd kamiwaza-deploy-source
-tar -czf "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" .
-
-# Clean up the temporary copy
-cd "$GITHUB_DIR"
-rm -rf kamiwaza-deploy-source
-
-# Verify the archive was created in the correct location
-if [ ! -f "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" ]; then
-    log_error "Failed to create kamiwaza-deploy.tar.gz in the correct location"
-    exit 1
-fi
-
-log_info "Successfully created kamiwaza-deploy.tar.gz in kamiwaza-deploy directory"
+# log_info "Creating kamiwaza-deploy archive..."
+#
+# # First, create a temporary copy of kamiwaza-deploy to archive
+# cd "$GITHUB_DIR"
+# cp -r kamiwaza-deploy kamiwaza-deploy-source
+#
+# # Create the archive in the correct location
+# cd kamiwaza-deploy-source
+# tar -czf "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" .
+#
+# # Clean up the temporary copy
+# cd "$GITHUB_DIR"
+# rm -rf kamiwaza-deploy-source
+#
+# # Verify the archive was created in the correct location
+# if [ ! -f "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" ]; then
+#     log_error "Failed to create kamiwaza-deploy.tar.gz in the correct location"
+#     exit 1
+# fi
+#
+# log_info "Successfully created kamiwaza-deploy.tar.gz in kamiwaza-deploy directory"
 
 # Ensure wheel and build tools are available on dev's machine
-pip install --upgrade pip setuptools wheel
+# pip install --upgrade pip setuptools wheel
 
 # Build Python wheels for requirements.txt
-echo "Building Python wheels for requirements.txt..."
-pip wheel -r "$GITHUB_DIR"/kamiwaza-deploy/requirements.txt -w "$PYTHON_WHEELS_DIR"
-
+# echo "Building Python wheels for requirements.txt..."
+# pip wheel -r "$GITHUB_DIR"/kamiwaza-deploy/requirements.txt -w "$PYTHON_WHEELS_DIR"
 
 # ############################## START DOWNLOADING .DEB PACKAGES
 # 2. Download .deb packages for all apt dependencies
 # List of required packages (from your install_dependencies function)
-DEB_PACKAGES=(
-    python3.10
-    python3.10-dev
-    libpython3.10-dev
-    python3.10-venv
-    golang-cfssl
-    python-is-python3
-    etcd-client
-    net-tools
-    build-essential
-    jq
-    pkg-config
-    libcairo2-dev
-    python3-dev
-    libgirepository1.0-dev
-    python3-gi
-    gir1.2-gtk-3.0
-    libgirepository-1.0-1
-    gobject-introspection
-    software-properties-common
-)
-
-# To reset:
-# sudo dpkg --purge --force-depends kamiwaza
-# sudo apt-get -f install
-# sudo apt update & sudo  apt upgrade
-
-echo "Downloading .deb packages and dependencies..."
-
-sudo apt update
-sudo apt install --reinstall --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
-sudo find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
-sudo rm -rf "$DEB_PACKAGES_DIR/archives"
-sudo chown -R $USER:$USER "$DEB_PACKAGES_DIR"
-
+# DEB_PACKAGES=( ... )
+# echo "Downloading .deb packages and dependencies..."
+# sudo apt update
+# sudo apt install --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
+# sudo find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
+# sudo rm -rf "$DEB_PACKAGES_DIR/archives"
+# sudo chown -R $USER:$USER "$DEB_PACKAGES_DIR"
 
 # ############################## START DOWNLOADING TARBALLS
 # 3. Download CockroachDB tarball
-echo "Downloading CockroachDB tarball..."
-curl -L -o "$COCKROACH_DIR/cockroach-v24.1.0.linux-amd64.tgz" https://binaries.cockroachdb.com/cockroach-v24.1.0.linux-amd64.tgz
-
+# echo "Downloading CockroachDB tarball..."
+# curl -L -o "$COCKROACH_DIR/cockroach-v24.1.0.linux-amd64.tgz" https://binaries.cockroachdb.com/cockroach-v24.1.0.linux-amd64.tgz
+#
 # 4. Download Node.js tarball (optional, for offline Node.js install)
-echo "Downloading Node.js v18 tarball..."
-curl -L -o "$NODEJS_DIR/node-v18.x-linux-x64.tar.xz" https://nodejs.org/dist/v18.20.3/node-v18.20.3-linux-x64.tar.xz
-
+# echo "Downloading Node.js v18 tarball..."
+# curl -L -o "$NODEJS_DIR/node-v18.x-linux-x64.tar.xz" https://nodejs.org/dist/v18.20.3/node-v18.20.3-linux-x64.tar.xz
+#
 # 5. Download Docker and Docker Compose .deb files
-echo "Downloading Docker and Docker Compose .deb files..."
-curl -L -o "$DOCKER_DIR/docker-25.0.3.tgz" https://download.docker.com/linux/static/stable/x86_64/docker-25.0.3.tgz
-
-curl -L -o "$DOCKER_DIR/docker-compose-linux-x86_64" https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-linux-x86_64
+# echo "Downloading Docker and Docker Compose .deb files..."
+# curl -L -o "$DOCKER_DIR/docker-26.0.7.tgz" https://download.docker.com/linux/static/stable/x86_64/docker-26.0.7.tgz
+# curl -L -o "$DOCKER_DIR/docker-compose-linux-x86_64" https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-linux-x86_64
 
 # # 6. Download CUDA .deb (optional, if you want to support CUDA offline)
 # # Example: libtinfo5
-# echo "Downloading libtinfo5 .deb..."
-# wget -O "$CUDA_DIR/libtinfo5_6.4-2_amd64.deb" http://launchpadlibrarian.net/648013231/libtinfo5_6.4-2_amd64.deb
+# # echo "Downloading libtinfo5 .deb..."
+# # wget -O "$CUDA_DIR/libtinfo5_6.4-2_amd64.deb" http://launchpadlibrarian.net/648013231/libtinfo5_6.4-2_amd64.deb
 
+# Create sample files in each directory
+log_info "Creating sample files in each directory for test build..."
 
-# Create a temporary directory to store the tar file
-mkdir -p "$GITHUB_DIR"/kamiwaza-deploy-temp
-# Move the tar file to the temporary directory if it exists
-if [ -f "$GITHUB_DIR"/kamiwaza-deploy/kamiwaza-deploy.tar.gz ]; then
-    mv "$GITHUB_DIR"/kamiwaza-deploy/kamiwaza-deploy.tar.gz "$GITHUB_DIR"/kamiwaza-deploy-temp/
-fi
-# Delete all files in the kamiwaza-deploy folder
-rm -rf "$GITHUB_DIR"/kamiwaza-deploy/*
-# Move the tar file back if it was saved
-if [ -f "$GITHUB_DIR"/kamiwaza-deploy-temp/kamiwaza-deploy.tar.gz ]; then
-    mv "$GITHUB_DIR"/kamiwaza-deploy-temp/kamiwaza-deploy.tar.gz "$GITHUB_DIR"/kamiwaza-deploy/
-fi
-# Remove the temporary directory
-rm -rf "$GITHUB_DIR"/kamiwaza-deploy-temp
+# CockroachDB tarball
+echo "sample cockroach tarball" > "$COCKROACH_DIR/cockroach-v24.1.0.linux-amd64.tgz"
+# Node.js tarball
+echo "sample nodejs tarball" > "$NODEJS_DIR/node-v18.x-linux-x64.tar.xz"
+# Docker files
+echo "sample docker tgz" > "$DOCKER_DIR/docker-26.0.7.tgz"
+echo "sample docker compose" > "$DOCKER_DIR/docker-compose-linux-x86_64"
+# Python wheel and deb
+echo "sample wheel" > "$PYTHON_WHEELS_DIR/sample.whl"
+echo "sample deb" > "$DEB_PACKAGES_DIR/sample.deb"
+echo "sample cuda deb" > "$CUDA_DIR/sample.deb"
 
-
+# Create kamiwaza-deploy folder and tarball
+mkdir -p "$GITHUB_DIR/kamiwaza-deploy"
+echo "sample tarball" > "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz"
 
 # ############################## START VERIFICATION
 # 7. Verify all required files are present
@@ -323,10 +298,6 @@ package_files() {
     # Cleanup function
     cleanup() {
         rm -f .packaging.lock
-        if [ $exit_code -ne 0 ]; then
-            log_error "Packaging failed. Check the logs above for details."
-            cleanup_build_artifacts
-        fi
     }
     trap cleanup EXIT
 
@@ -345,6 +316,28 @@ package_files() {
     
     # Set environment variables for faster builds
     export DEB_BUILD_OPTIONS="parallel=$(nproc)"
+    
+    # This is the root of the packaging tree for the .deb
+    PKGROOT="kamiwaza-deb/kamiwaza/usr/share/kamiwaza"
+
+    # Ensure the packaging tree exists
+    mkdir -p "$PKGROOT/wheels" "$PKGROOT/debs" "$PKGROOT/cuda"
+
+    # # Copy the sample files into the packaging tree with the correct names
+    # cp "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" "$PKGROOT/kamiwaza-deploy.tar.gz"
+    # cp "$COCKROACH_DIR/cockroach-v24.1.0.linux-amd64.tgz" "$PKGROOT/cockroach-v24.1.0.linux-amd64.tgz"
+    # # The postinst expects node-v18.20.3-linux-x64.tar.xz, so rename if needed:
+    # cp "$NODEJS_DIR/node-v18.x-linux-x64.tar.xz" "$PKGROOT/node-v18.20.3-linux-x64.tar.xz"
+    # cp "$PYTHON_WHEELS_DIR/"*.whl "$PKGROOT/wheels/"
+    # cp "$DEB_PACKAGES_DIR/"*.deb "$PKGROOT/debs/"
+    # cp "$CUDA_DIR/"*.deb "$PKGROOT/cuda/"
+    
+    echo "sample tarball" > "$PKGROOT/kamiwaza-deploy.tar.gz"
+    echo "sample cockroach tarball" > "$PKGROOT/cockroach-v24.1.0.linux-amd64.tgz"
+    echo "sample nodejs tarball" > "$PKGROOT/node-v18.20.3-linux-x64.tar.xz"
+    echo "sample wheel" > "$PKGROOT/wheels/sample.whl"
+    echo "sample deb" > "$PKGROOT/debs/sample.deb"
+    echo "sample cuda deb" > "$PKGROOT/cuda/sample.deb"
     
     # Build the package
     if ! sudo dpkg-buildpackage -us -uc -rfakeroot; then

@@ -1,0 +1,7 @@
+./kamiwaza-test/kamiwaza-deploy
+./kamiwaza-test/offline_cockroach
+./kamiwaza-test/offline_cuda
+./kamiwaza-test/offline_debs
+./kamiwaza-test/offline_docker
+./kamiwaza-test/offline_nodejs
+./kamiwaza-test/offline_python_wheels
