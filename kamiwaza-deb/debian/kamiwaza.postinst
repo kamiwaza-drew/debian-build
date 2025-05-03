@@ -1,7 +1,7 @@
 #!/bin/sh
 # postinst script for kamiwaza
 
-set -e
+set -x
 
 
 # Colors for output
@@ -113,13 +113,13 @@ tar -xzf /usr/share/kamiwaza/kamiwaza-deploy/kamiwaza-deploy.tar.gz -C $INSTALL_
 
 # Add the virtual environment to the installation directory
 echo "=== Adding virtual environment ==="
-python3.10 -m venv $INSTALL_DIR/.venv
+python3.10 -m venv $INSTALL_DIR/venv
 
 # Install the pip requirements
 update_progress "Installing pip requirements"
 echo "=== Installing pip requirements ==="
-$INSTALL_DIR/.venv/bin/pip install --upgrade pip
-$INSTALL_DIR/.venv/bin/pip install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
+$INSTALL_DIR/venv/bin/pip install --upgrade pip
+$INSTALL_DIR/venv/bin/pip install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
 
 # Install the docker-compose.tar.gz to /opt/kamiwaza/
 update_progress "Installing docker-compose"
@@ -132,6 +132,8 @@ update_progress "Installing docker"
 echo "=== Installing docker ==="
 tar -xzf $DOCKER_TAR -C $INSTALL_DIR
 
+# Now ensure user is part of the docker group or else we'll get Please ensure your user is added to the 'docker' group and try again.
+sudo usermod -aG docker $USER
 
 # Install the node-v18.x-linux-x64.tar.xz to /opt/kamiwaza/
 update_progress "Installing node"
@@ -174,13 +176,6 @@ EOF
 else
     echo "env.sh already exists in $INSTALL_DIR"
 fi
-
-
-
-
-
-
-
 
 
 
@@ -369,26 +364,28 @@ if ! command -v pip3 >/dev/null 2>&1; then
 fi
 
 echo "=== Creating Python virtual environment ==="
-python3.10 -m venv "$INSTALL_DIR/.venv"
-"$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
-"$INSTALL_DIR/.venv/bin/pip" install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
+python3.10 -m venv "$INSTALL_DIR/venv"
+"$INSTALL_DIR/venv/bin/pip" install --upgrade pip
+"$INSTALL_DIR/venv/bin/pip" install --no-index --find-links="$WHEELS_DIR" "$WHEELS_DIR"/*.whl
 
 echo "=== Setting permissions ==="
-sudo chown -R root:root "$INSTALL_DIR"
+sudo chown -R $USER:$USER "$INSTALL_DIR"
 sudo chmod -R 755 "$INSTALL_DIR"
 
 
 
 cd $INSTALL_DIR
 update_progress "=== Installing kamiwaza Python Dependencies ==="
-source env.sh
-source common.sh
-update_progress "=== Installing kamiwaza Setup Script ==="
-bash setup.sh
-
+. env.sh
+. common.sh
+# Setup kamiwaza-start as a command
+echo '#!/bin/sh
+/opt/kamiwaza/linux-install.sh --non-interactive "$@"' | sudo tee /usr/local/bin/kamiwaza-start > /dev/null
+sudo chmod +x /usr/local/bin/kamiwaza-start
 
 
 log_info "================================================="
 log_info "=== Kamiwaza offline installation complete! ==="
+log_info "Please run kamiwaza-start to start the cluster"
 log_info "================================================="
 exit 0 
