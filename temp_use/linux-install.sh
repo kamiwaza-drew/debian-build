@@ -236,7 +236,9 @@ install_dependencies() {
     log_info "Installing CockroachDB..."
     if ! command_exists cockroach; then
         cd /tmp
+        # Put this into the deb file
         curl -O https://binaries.cockroachdb.com/cockroach-v24.1.0.linux-amd64.tgz
+        # on the postinst script, run this:
         tar xzf cockroach-v24.1.0.linux-amd64.tgz
         sudo cp -f cockroach-v24.1.0.linux-amd64/cockroach /usr/local/bin/
         sudo chmod 755 /usr/local/bin/cockroach
@@ -356,37 +358,33 @@ launch_ray() {
     
     wait_for_package_lock
     
-    # Completely uninstall and reinstall Ray
-    log_info "Completely reinstalling Ray..."
-    pip uninstall -y ray || true
-    pip uninstall -y redis || true
-    pip uninstall -y hiredis || true
     
     # Kill ALL possible Ray and Redis processes
     log_info "Killing ALL Ray and Redis processes..."
-    pkill -9 -f ray || true
-    pkill -9 -f redis-server || true
-    pkill -9 -f redis || true
-    pkill -9 -f raylet || true
-    pkill -9 -f plasma_store || true
-    pkill -9 -f gcs_server || true
+    ray stop || true
+    sudo pkill -9 -f ray || true
+    sudo pkill -9 -f redis-server || true
+    sudo pkill -9 -f redis || true
+    sudo pkill -9 -f raylet || true
+    sudo pkill -9 -f plasma_store || true
+    sudo pkill -9 -f gcs_server || true
     
     # Remove ALL possible Ray and Redis files
     log_info "Removing ALL Ray and Redis files..."
-    rm -rf /tmp/ray || true
-    rm -rf ~/.ray || true
-    rm -rf /tmp/redis* || true
-    rm -rf /var/run/redis* || true
-    rm -rf /var/lib/redis* || true
-    rm -rf /var/log/redis* || true
-    rm -rf /etc/redis* || true
-    rm -rf /tmp/plasma* || true
-    rm -rf /dev/shm/plasma* || true
+    sudo rm -rf /tmp/ray || true
+    sudo rm -rf ~/.ray || true
+    sudo rm -rf /tmp/redis* || true
+    sudo rm -rf /var/run/redis* || true
+    sudo rm -rf /var/lib/redis* || true
+    sudo rm -rf /var/log/redis* || true
+    sudo rm -rf /etc/redis* || true
+    sudo rm -rf /tmp/plasma* || true
+    sudo rm -rf /dev/shm/plasma* || true
     
     # Kill any processes using Ray's ports
     log_info "Killing processes using Ray's ports..."
     for port in 6379 8265 10001 10002 10003 10004 10005; do
-        lsof -ti:$port | xargs -r kill -9 || true
+        sudo lsof -ti:$port | xargs -r sudo kill -9 || true
     done
     
     # Wait for everything to settle
@@ -394,7 +392,7 @@ launch_ray() {
     
     # Install fresh Ray and Redis
     log_info "Installing fresh Ray and Redis..."
-    pip install ray==2.9.3 redis==4.6.0 hiredis==3.1.0
+    # pip install ray==2.9.3 redis==4.6.0 hiredis==3.1.0
     
     # Set proper permissions before starting Ray
     set_ray_permissions
@@ -405,9 +403,9 @@ launch_ray() {
     log_info "Current directory: $current_dir"
     if [ -f "start-ray.sh" ]; then
         bash $current_dir/start-ray.sh
-        log_info "Ray launched successfully."
+        echo "Ray launched successfully."
     else
-        log_error "$current_dir/start-ray.sh script not found."
+        echo "$current_dir/start-ray.sh script not found."
         exit 1
     fi
 }
@@ -500,13 +498,17 @@ setup_frontend() {
 setup_environment() {
     log_info "Setting up environment variables..."
     
-    # Check if env.sh.example exists
-    if [ -f "env.sh.example" ]; then
-        cp env.sh.example env.sh
-        log_info "Created env.sh from example template."
+    # Check if env.sh already exists
+    if [ -f "env.sh" ]; then
+        log_info "env.sh already exists. Using existing file."
     else
-        log_warn "env.sh.example not found. Creating env.sh manually."
-        cat > env.sh << EOL
+        # Check if env.sh.example exists
+        if [ -f "env.sh.example" ]; then
+            cp env.sh.example env.sh
+            log_info "Created env.sh from example template."
+        else
+            log_warn "env.sh.example not found. Creating env.sh manually."
+            cat > env.sh << EOL
 # Environment variables for Kamiwaza
 export KAMIWAZA_RUN_FROM_INSTALL=true
 export KAMIWAZA_CLUSTER_MEMBER=true
@@ -517,6 +519,7 @@ export KAMIWAZA_HEAD_IP=127.0.0.1
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 export VIRTUAL_ENV=True
 EOL
+        fi
     fi
     
     # Source the environment file
@@ -544,55 +547,43 @@ install_kamiwaza() {
     # Run installation directly, bypassing WSL check
     log_info "Running installation script..."
     
-    if [ "$NON_INTERACTIVE" = true ]; then
-        # Automatically proceed with installation in non-interactive mode
-        proceed_install="y"
-    else
-        read -p "Do you want to proceed with installation? [y/N]: " proceed_install
+    proceed_install="y"
+    
+    # Skip the WSL check and run the core installation
+    source set-kamiwaza-root.sh
+    source common.sh
+    setup_environment
+    source "${KAMIWAZA_ROOT:-}/env.sh"
+
+    export USER_ACCEPTED_KAMIWAZA_LICENSE='yes'
+    
+    # Create and activate virtual environment if needed
+    if [[ -z "${VIRTUAL_ENV:-}" ]]; then
+        python3.10 -m venv venv
+        source venv/bin/activate
     fi
     
-    if [[ "$proceed_install" == "y" || "$proceed_install" == "Y" ]]; then
-        # Skip the WSL check and run the core installation
-        source set-kamiwaza-root.sh
-        source common.sh
-        setup_environment
-        source "${KAMIWAZA_ROOT:-}/env.sh"
+    # Fix permissions if needed
+    chmod 774 ${KAMIWAZA_ROOT}/startup/kamiwazad.sh || true
+    
+    # Run the core installation
+    export KAMIWAZA_RUN_FROM_INSTALL='yes'
 
-        # prompt user to accept the kamiwaza license
-        read -p "Do you accept the Kamiwaza license? [y/N]: " accept_license
-        if [[ "$accept_license" != "y" && "$accept_license" != "Y" ]]; then
-            log_error "You must accept the Kamiwaza license to install Kamiwaza."
-            exit 1
-        else
-            export USER_ACCEPTED_KAMIWAZA_LICENSE='yes'
-        fi
-        
-        # Create and activate virtual environment if needed
-        if [[ -z "${VIRTUAL_ENV:-}" ]]; then
-            python3.10 -m venv venv
-            source venv/bin/activate
-        fi
-        
-        # Fix permissions if needed
-        chmod 774 ${KAMIWAZA_ROOT}/startup/kamiwazad.sh || true
-        
-        # Run the core installation
-        export KAMIWAZA_RUN_FROM_INSTALL='yes'
-        source setup.sh
-        unset KAMIWAZA_RUN_FROM_INSTALL
-        
-        # Fix permissions after installation
-        log_info "Fixing permissions after installation..."
-        current_user=$(whoami)
-        if [ -d "kamiwaza/deployment" ]; then
-            sudo chown -R ${current_user}:${current_user} kamiwaza/deployment
-        fi
-        sudo chown -R ${current_user}:${current_user} .
-        
-        log_info "Kamiwaza installation completed."
-    else
-        log_info "Installation skipped."
+    bash containers-up.sh
+
+    python install.py
+
+    unset KAMIWAZA_RUN_FROM_INSTALL
+    
+    # Fix permissions after installation
+    log_info "Fixing permissions after installation..."
+    current_user=$(whoami)
+    if [ -d "kamiwaza/deployment" ]; then
+        sudo chown -R ${current_user}:${current_user} kamiwaza/deployment
     fi
+    sudo chown -R ${current_user}:${current_user} .
+    
+    log_info "Kamiwaza installation completed."
 }
 
 # Optional CUDA setup
@@ -886,44 +877,22 @@ main() {
     
     # Check environment
     check_distribution
+  
+    log_info "########################################################"
+    log_info "Step 7: Generate SSL certificate"
+    log_info "########################################################"
+    generate_ssl_cert
 
     log_info "########################################################"
-    log_info "Step 1: Install and verify components"
+    log_info "Step 8: Launch Ray"
     log_info "########################################################"
-    
-    # Install and verify components
-    install_dependencies
-
-    log_info "########################################################"
-    log_info "Step 2: Verify Docker"
-    log_info "########################################################"
-    verify_docker
-    
-    log_info "########################################################"
-    log_info "Step 3: Initial permissions setup"
-    log_info "########################################################"
-    # Initial permissions setup
-    setup_permissions
-    
-    log_info "########################################################"
-    log_info "Step 4: Setup Python environment"
-    log_info "########################################################"
-    setup_python_env
-    
-    log_info "########################################################"
-    log_info "Step 5: Setup environment"
-    log_info "########################################################"
-    setup_environment
     launch_ray
+
     log_info "########################################################"
-    log_info "Step 6: Install Kamiwaza core"
+    log_info "Step 9: Install Kamiwaza"
     log_info "########################################################"
     install_kamiwaza
-    
-    log_info "########################################################"
-    log_info "Step 7: Final permissions check and fix"
-    log_info "########################################################"
-    # Final permissions check
+
     log_info "Running final permissions check and fix..."
     current_user=$(whoami)
     
@@ -941,11 +910,22 @@ main() {
     if [ -d "runtime" ]; then
         sudo chown -R ${current_user}:${current_user} runtime
     fi
+
     
     log_info "########################################################"
-    log_info "Step 8: Setup CUDA"
+    log_info "Step 8: Generate SSL certificate"
     log_info "########################################################"
-    setup_cuda
+    generate_ssl_cert
+
+    log_info "########################################################"
+    log_info "Step 9: Launch Ray"
+    log_info "########################################################"
+    launch_ray
+
+    log_info "########################################################"
+    log_info "Step 10: Install Kamiwaza"
+    log_info "########################################################"
+    install_kamiwaza
     
     log_info "Installation process completed!"
     log_info "To confirm the CockroachDB is working, navigate to:"
