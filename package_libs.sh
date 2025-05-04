@@ -4,9 +4,10 @@
 # Remove set -e to prevent silent failures
 # set -e
 # Remove any old lock files from all relevant locations
-rm -f .packaging.lock
-rm -f kamiwaza-deb/.packaging.lock
-rm -f kamiwaza-deb/kamiwaza-test/.packaging.lock
+sudo rm -f .packaging.lock
+sudo -f kamiwaza-deb/.packaging.lock
+sudo -f kamiwaza-deb/kamiwaza-test/.packaging.lock
+
 
 # Set a variable of the directory of the script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,28 +44,10 @@ check_and_fix_permissions() {
     fi
 }
 
-# Clean up any existing root-owned build artifacts
-cleanup_build_artifacts() {
-    local build_dirs=(
-        "kamiwaza-deb/debian/.debhelper"
-        "kamiwaza-deb/debian/kamiwaza"
-        "kamiwaza-deb/debian/files"
-        "kamiwaza-deb/debian/.*.debhelper"
-        "kamiwaza-deb/debian/*.substvars"
-        "kamiwaza-deb/debian/*.log"
-    )
 
-    for dir in "${build_dirs[@]}"; do
-        if [ -e "$dir" ]; then
-            log_info "Cleaning up $dir"
-            sudo rm -rf "$dir"
-        fi
-    done
-}
 
 # Initial permission and cleanup checks
 log_info "Performing initial permission and cleanup checks..."
-cleanup_build_artifacts
 
 GITHUB_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test"
 
@@ -95,7 +78,7 @@ read -p "Enter your choice (1 or 2): " BRANCH_CHOICE
 if [ "$BRANCH_CHOICE" = "2" ]; then
     GIT_BRANCH="develop"
 else
-    GIT_BRANCH="main"
+    GIT_BRANCH="master"
 fi
 
 
@@ -121,8 +104,27 @@ if [ -d "kamiwaza" ]; then
     rm -rf "kamiwaza"
 fi
 
+# if git branch is master, then this is main, otherwise it is develop
+if [ "$GIT_BRANCH" = "master" ]; then
+    GIT_BRANCH="main"
+fi
+
 # Clone the repository fresh every time
 git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza.git
+
+
+# ============= DEV-ONLY: Overwrite extracted files with /home/kamiwaza/temp_use/ =============
+echo "=== [DEV ONLY] Overwriting extracted files with $SCRIPT_DIR/temp_use/ ==="
+cd "$SCRIPT_DIR"
+if [ -d "temp_use/" ]; then
+    cp -rf temp_use/* "$GITHUB_DIR/kamiwaza-deploy/"
+    echo "[DEV ONLY] Copied files from $SCRIPT_DIR/temp_use/ to $GITHUB_DIR/kamiwaza-deploy/"
+else
+    echo "[DEV ONLY] $SCRIPT_DIR/temp_use/ does not exist, skipping dev overwrite."
+fi
+# ============= END DEV-ONLY =============
+
+
 
 # Now create a tar.gz archive of kamiwaza-deploy
 log_info "Creating kamiwaza-deploy archive..."
@@ -130,15 +132,12 @@ log_info "Creating kamiwaza-deploy archive..."
 # First, create a temporary copy of kamiwaza-deploy to archive
 cd "$GITHUB_DIR"
 cp -r kamiwaza-deploy kamiwaza-deploy-source
- git pull origin "$GIT_BRANCH"
 cd "$GITHUB_DIR"/kamiwaza-deploy
 # Create the archive in the correct location
-cd kamiwaza-deploy-source
 tar -czf "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" .
 
 # Clean up the temporary copy
 cd "$GITHUB_DIR"
-rm -rf kamiwaza-deploy-source
 
 # Verify the archive was created in the correct location
 if [ ! -f "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" ]; then
@@ -169,15 +168,33 @@ DEB_PACKAGES=(
     etcd-client
     net-tools
     build-essential
+    g++
     jq
+    libjq1
     pkg-config
     libcairo2-dev
+    libcairo-script-interpreter2
+    libfontconfig1-dev
+    libfreetype6-dev
+    libx11-dev
+    libxrender-dev
+    libxext-dev
+    libpng-dev
+    libsm-dev
+    libpixman-1-dev
+    libxcb1-dev
+    libxcb-render0-dev
+    libxcb-shm0-dev
+    libglib2.0-dev
     python3-dev
     libgirepository1.0-dev
+    libffi-dev
     python3-gi
     gir1.2-gtk-3.0
     libgirepository-1.0-1
     gobject-introspection
+    python3-mako
+    python3-markdown
     software-properties-common
 )
 
