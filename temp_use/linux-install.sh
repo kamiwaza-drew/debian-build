@@ -994,10 +994,22 @@ main() {
     fi
     
     log_info "########################################################"
+    log_info "Step 8: Generate SSL certificate"
+    log_info "########################################################"
+    generate_ssl_cert
+
     log_info "Step 8: Setup CUDA"
     log_info "########################################################"
+    log_info "Step 9: Launch Ray"
+    log_info "########################################################"
+    launch_ray
+
+    log_info "########################################################"
+    log_info "Step 10: Install Kamiwaza"
+    log_info "########################################################"
+    install_kamiwaza
     setup_cuda
-    
+
     log_info "Installation process completed!"
     log_info "To confirm the CockroachDB is working, navigate to:"
     log_info "cd kamiwaza/deployment/envs/default/kamiwaza-cockroachdb/amd64"
