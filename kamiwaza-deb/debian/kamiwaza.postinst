@@ -160,10 +160,20 @@ sudo chown -R $USER:$USER $INSTALL_DIR
 
 # if there's no env.sh in the installation directory, make one: 
 echo "=== Creating env.sh ==="
-if [ ! -f "$INSTALL_DIR/env.sh" ]; then
-    cat <<EOF > "$INSTALL_DIR/env.sh"
-# Kamiwaza Community Edition Environment
-# Kamiwaza Community Edition Environment
+cd $INSTALL_DIR
+
+# Check if env.sh already exists
+if [ -f "env.sh" ]; then
+    log_info "env.sh already exists. Using existing file."
+else
+    # Check if env.sh.example exists
+    if [ -f "env.sh.example" ]; then
+        cp env.sh.example env.sh
+        log_info "Created env.sh from example template."
+    else
+        log_warn "env.sh.example not found. Creating env.sh manually."
+        cat > env.sh << EOL
+# Environment variables for Kamiwaza
 export KAMIWAZA_CLUSTER_MEMBER=true
 export KAMIWAZA_INSTALL_ROOT=/opt/kamiwaza
 export KAMIWAZA_SWARM_HEAD=true
@@ -171,11 +181,13 @@ export KAMIWAZA_ORIG_NODE_TYPE=head
 export KAMIWAZA_RUN_FROM_INSTALL='yes'
 export KAMIWAZA_HEAD_IP=$(hostname -I | awk '{print $1}')
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-EOF
-    echo "env.sh created in $INSTALL_DIR"
-else
-    echo "env.sh already exists in $INSTALL_DIR"
+export VIRTUAL_ENV=True
+EOL
+    fi
 fi
+    
+    # Source the environment file
+    source env.sh
 
 
 
@@ -279,15 +291,6 @@ check_distribution
 # 4. Package the whole thing into a deb
 # 5. Build the deb
 
-# ============= DEV-ONLY: Overwrite extracted files with /home/kamiwaza/temp_use/ =============
-echo "=== [DEV ONLY] Overwriting extracted files with /home/kamiwaza/temp_use/ ==="
-if [ -d "/home/kamiwaza/temp_use/" ]; then
-    cp -rf /home/kamiwaza/temp_use/* "$INSTALL_DIR/"
-    echo "[DEV ONLY] Copied files from /home/kamiwaza/temp_use/ to $INSTALL_DIR/"
-else
-    echo "[DEV ONLY] /home/kamiwaza/temp_use/ does not exist, skipping dev overwrite."
-fi
-# ============= END DEV-ONLY =============
 
 # Set permissions
 echo "=== Setting permissions ==="
