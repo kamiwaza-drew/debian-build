@@ -6,6 +6,81 @@ set -e  # Exit on error
 cd /opt/kamiwaza
 echo "Working directory: $(pwd)"
 
+
+# List of required packages (replace with your actual package names)
+REQUIRED_PACKAGES=(
+    python3.10
+    python3.10-dev
+    libpython3.10-dev
+    python3.10-venv
+    golang-cfssl
+    python-is-python3
+    etcd-client
+    net-tools
+    build-essential
+    g++
+    jq
+    libjq1
+    pkg-config
+    libcairo2-dev
+    libcairo-script-interpreter2
+    libfontconfig1-dev
+    libfreetype6-dev
+    libx11-dev
+    libxrender-dev
+    libxext-dev
+    libpng-dev
+    libsm-dev
+    libpixman-1-dev
+    libxcb1-dev
+    libxcb-render0-dev
+    libxcb-shm0-dev
+    libglib2.0-dev
+    python3-dev
+    libgirepository1.0-dev
+    libffi-dev
+    python3-gi
+    gir1.2-gtk-3.0
+    libgirepository-1.0-1
+    gobject-introspection
+    python3-mako
+    python3-markdown
+    software-properties-common
+)
+DEBS_DIR="/opt/kamiwaza/offline_debs"
+FIRST_RUN_FLAG="/opt/kamiwaza/.offline_deps_installed"
+sudo touch "$FIRST_RUN_FLAG"
+sudo chmod 644 "$FIRST_RUN_FLAG"
+
+# Function to check if all dependencies are installed
+all_deps_installed() {
+    for pkg in "${REQUIRED_PACKAGES[@]}"; do
+        dpkg -s "$pkg" &>/dev/null || return 1
+    done
+    return 0
+}
+
+# Only run this block if the flag file does not exist
+if [ ! -f "$FIRST_RUN_FLAG" ]; then
+    if ! all_deps_installed; then
+        log_info "Some dependencies are missing. Installing offline .deb dependencies..."
+        sudo dpkg -i "$DEBS_DIR"/*.deb || sudo apt-get install -f -y
+        # Re-check to ensure all are now installed
+        if all_deps_installed; then
+            log_info "All dependencies installed successfully."
+            touch "$FIRST_RUN_FLAG"
+        else
+            log_error "Failed to install all dependencies. Please check the .deb files and try again."
+            exit 1
+        fi
+    else
+        touch "$FIRST_RUN_FLAG"
+    fi
+fi
+
+
+
+
 # Save a variable for the current user and directory
 current_user=$(whoami)
 echo "Current user: $current_user"
@@ -874,6 +949,13 @@ wait_for_service() {
 # Main function to orchestrate the installation
 main() {
     log_info "Starting Kamiwaza installation on Ubuntu..."
+    # Define installation directory if not already defined
+    INSTALL_DIR=${INSTALL_DIR:-/opt/kamiwaza}
+    
+    # Ensure proper permissions for the installation directory
+    log_info "Setting permissions for installation directory..."
+    sudo chmod -R 770 $INSTALL_DIR
+    sudo chown -R ${current_user}:${current_user} $INSTALL_DIR
     
     # Check environment
     check_distribution
@@ -910,22 +992,11 @@ main() {
     if [ -d "runtime" ]; then
         sudo chown -R ${current_user}:${current_user} runtime
     fi
-
     
     log_info "########################################################"
-    log_info "Step 8: Generate SSL certificate"
+    log_info "Step 8: Setup CUDA"
     log_info "########################################################"
-    generate_ssl_cert
-
-    log_info "########################################################"
-    log_info "Step 9: Launch Ray"
-    log_info "########################################################"
-    launch_ray
-
-    log_info "########################################################"
-    log_info "Step 10: Install Kamiwaza"
-    log_info "########################################################"
-    install_kamiwaza
+    setup_cuda
     
     log_info "Installation process completed!"
     log_info "To confirm the CockroachDB is working, navigate to:"
