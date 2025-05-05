@@ -993,6 +993,15 @@ main() {
         sudo chown -R ${current_user}:${current_user} frontend
     fi
     
+    if [ -f llamacpp.commit ] ; then
+        if [[ "$install_llamacpp" == "yes" || "$(uname)" == "Darwin" ]]; then
+            log_info "### Installing llamacpp..."
+            bash build-llama-cpp.sh
+        else
+            log_info "Skipping llamacpp installation."
+        fi
+    fi
+    
     # Set permissions on runtime directory if it exists
     if [ -d "runtime" ]; then
         sudo chown -R ${current_user}:${current_user} runtime
