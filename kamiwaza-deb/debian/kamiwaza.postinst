@@ -337,24 +337,24 @@ else
     log_warn "WARNING: $NODEJS_TAR not found, skipping Node.js extraction."
 fi
 
-echo "=== Installing CUDA .deb files ==="
-if [ -d "$CUDA_DIR" ]; then
-    # Check if there are any .deb files in the directory
-    if ls "$CUDA_DIR"/*.deb >/dev/null 2>&1; then
-        sudo dpkg -i "$CUDA_DIR"/*.deb || sudo apt-get -f install -y
-    else
-        log_warn "WARNING: No .deb files found in $CUDA_DIR, skipping CUDA .deb install."
-    fi
-else
-    log_warn "WARNING: $CUDA_DIR not found, skipping CUDA .deb install."
-fi
+# echo "=== Installing CUDA .deb files ==="
+# if [ -d "$CUDA_DIR" ]; then
+#     # Check if there are any .deb files in the directory
+#     if ls "$CUDA_DIR"/*.deb >/dev/null 2>&1; then
+#         sudo dpkg -i "$CUDA_DIR"/*.deb || sudo apt-get -f install -y
+#     else
+#         log_warn "WARNING: No .deb files found in $CUDA_DIR, skipping CUDA .deb install."
+#     fi
+# else
+#     log_warn "WARNING: $CUDA_DIR not found, skipping CUDA .deb install."
+# fi
 
-echo "=== Installing other .deb files ==="
-if [ -d "$DEBS_DIR" ]; then
-    sudo dpkg -i "$DEBS_DIR"/*.deb || sudo apt-get -f install -y
-else
-    log_warn "WARNING: $DEBS_DIR not found, skipping .deb install."
-fi
+# echo "=== Installing other .deb files ==="
+# if [ -d "$DEBS_DIR" ]; then
+#     sudo dpkg -i "$DEBS_DIR"/*.deb || sudo apt-get -f install -y
+# else
+#     log_warn "WARNING: $DEBS_DIR not found, skipping .deb install."
+# fi
 
 echo "=== Ensuring Python 3.10 and pip are installed ==="
 if ! command -v python3.10 >/dev/null 2>&1; then
