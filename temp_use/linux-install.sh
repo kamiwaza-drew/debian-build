@@ -644,7 +644,7 @@ install_kamiwaza() {
     # Run the core installation
     export KAMIWAZA_RUN_FROM_INSTALL='yes'
 
-    bash containers-up.sh
+    # bash containers-up.sh
 
     python install.py
 
@@ -959,7 +959,12 @@ main() {
     
     # Check environment
     check_distribution
-  
+
+    log_info "########################################################"
+    log_info "Step 6: Verify Docker"
+    log_info "########################################################"
+    verify_docker
+
     log_info "########################################################"
     log_info "Step 7: Generate SSL certificate"
     log_info "########################################################"
