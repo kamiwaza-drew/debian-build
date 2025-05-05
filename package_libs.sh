@@ -60,15 +60,14 @@ fi
 
 # Directories to store offline packages
 PYTHON_WHEELS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_python_wheels"
-DEB_PACKAGES_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_debs"
 COCKROACH_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cockroach"
 CUDA_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cuda"
 NODEJS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_nodejs"
 DOCKER_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_docker"
 
 
-mkdir -p "$PYTHON_WHEELS_DIR" "$DEB_PACKAGES_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR" "$DOCKER_DIR"
-rm -f "$DEB_PACKAGES_DIR"/*.deb
+mkdir -p "$PYTHON_WHEELS_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR" "$DOCKER_DIR"
+
 # Prompt for branch selection
 echo "Select branch to use for kamiwaza-deploy and kamiwaza:"
 echo "1) main (default)"
@@ -158,58 +157,58 @@ pip wheel -r "$GITHUB_DIR"/kamiwaza-deploy/requirements.txt -w "$PYTHON_WHEELS_D
 # ############################## START DOWNLOADING .DEB PACKAGES
 # 2. Download .deb packages for all apt dependencies
 # List of required packages (from your install_dependencies function)
-DEB_PACKAGES=(
-    python3.10
-    python3.10-dev
-    libpython3.10-dev
-    python3.10-venv
-    golang-cfssl
-    python-is-python3
-    etcd-client
-    net-tools
-    build-essential
-    g++
-    jq
-    libjq1
-    pkg-config
-    libcairo2-dev
-    libcairo-script-interpreter2
-    libfontconfig1-dev
-    libfreetype6-dev
-    libx11-dev
-    libxrender-dev
-    libxext-dev
-    libpng-dev
-    libsm-dev
-    libpixman-1-dev
-    libxcb1-dev
-    libxcb-render0-dev
-    libxcb-shm0-dev
-    libglib2.0-dev
-    python3-dev
-    libgirepository1.0-dev
-    libffi-dev
-    python3-gi
-    gir1.2-gtk-3.0
-    libgirepository-1.0-1
-    gobject-introspection
-    python3-mako
-    python3-markdown
-    software-properties-common
-)
+# DEB_PACKAGES=(
+#     python3.10
+#     python3.10-dev
+#     libpython3.10-dev
+#     python3.10-venv
+#     golang-cfssl
+#     python-is-python3
+#     etcd-client
+#     net-tools
+#     build-essential
+#     g++
+#     jq
+#     libjq1
+#     pkg-config
+#     libcairo2-dev
+#     libcairo-script-interpreter2
+#     libfontconfig1-dev
+#     libfreetype6-dev
+#     libx11-dev
+#     libxrender-dev
+#     libxext-dev
+#     libpng-dev
+#     libsm-dev
+#     libpixman-1-dev
+#     libxcb1-dev
+#     libxcb-render0-dev
+#     libxcb-shm0-dev
+#     libglib2.0-dev
+#     python3-dev
+#     libgirepository1.0-dev
+#     libffi-dev
+#     python3-gi
+#     gir1.2-gtk-3.0
+#     libgirepository-1.0-1
+#     gobject-introspection
+#     python3-mako
+#     python3-markdown
+#     software-properties-common
+# )
 
-# To reset:
-# sudo dpkg --purge --force-depends kamiwaza
-# sudo apt-get -f install
-# sudo apt update & sudo  apt upgrade
+# # To reset:
+# # sudo dpkg --purge --force-depends kamiwaza
+# # sudo apt-get -f install
+# # sudo apt update & sudo  apt upgrade
 
-echo "Downloading .deb packages and dependencies..."
+# echo "Downloading .deb packages and dependencies..."
 
-sudo apt update
-sudo apt install --reinstall --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
-sudo find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
-sudo rm -rf "$DEB_PACKAGES_DIR/archives"
-sudo chown -R $USER:$USER "$DEB_PACKAGES_DIR"
+# sudo apt update
+# sudo apt install --reinstall --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
+# sudo find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
+# sudo rm -rf "$DEB_PACKAGES_DIR/archives"
+# sudo chown -R $USER:$USER "$DEB_PACKAGES_DIR"
 
 
 # ############################## START DOWNLOADING TARBALLS
@@ -261,13 +260,6 @@ verify_files() {
     {
         if [ ! "$(ls -A "$PYTHON_WHEELS_DIR"/*.whl 2>/dev/null)" ]; then
             log_error "ERROR: No Python wheels found in $PYTHON_WHEELS_DIR"
-            errors=$((errors + 1))
-        fi
-    } &
-
-    {
-        if [ ! "$(ls -A "$DEB_PACKAGES_DIR"/*.deb 2>/dev/null)" ]; then
-            log_error "ERROR: No deb packages found in $DEB_PACKAGES_DIR"
             errors=$((errors + 1))
         fi
     } &

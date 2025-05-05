@@ -117,11 +117,11 @@ if [[ -z "${KAMIWAZA_RUN_FROM_INSTALL:-}" ]]; then
     exit 1
 fi
 
-pip install --upgrade -r requirements.txt
+# pip install --upgrade -r requirements.txt
 
-# install pymilvus 2.4.10 without dependencies
-pip install --no-deps "pymilvus==2.4.10"
-pip install --no-deps "milvus-lite==2.4.10"
+# # install pymilvus 2.4.10 without dependencies
+# pip install --no-deps "pymilvus==2.4.10"
+# pip install --no-deps "milvus-lite==2.4.10"
 
 tmp_dir=$(mktemp -d tmp_XXXXXX)
 pushd "$tmp_dir" > /dev/null
@@ -513,11 +513,11 @@ if [ ! -d 'notebook-venv' ] ; then
         pip install "$kamiwaza_wheel"
     fi
     
-    pip install -r requirements.txt
-    pip install -r notebooks/extra-requirements.txt
-    # install pymilvus 2.4.10 without dependencies
-    pip install --no-deps "pymilvus==2.4.10"
-    pip install --no-deps "milvus-lite==2.4.10"
+    # pip install -r requirements.txt
+    # pip install -r notebooks/extra-requirements.txt
+    # # install pymilvus 2.4.10 without dependencies
+    # pip install --no-deps "pymilvus==2.4.10"
+    # pip install --no-deps "milvus-lite==2.4.10"
     )
 else
     print_in_color red "Warning: 'notebook-venv' already exists. This may indicate that Kamiwaza is already installed."
@@ -532,18 +532,18 @@ else
         source notebook-venv/bin/activate
         kamiwaza_wheel=$(find . -name 'kamiwaza*.whl')
         
-        if [[ -z "$kamiwaza_wheel" ]]; then
-            if [ -f "compile.sh" ]; then
-                print_in_color yellow "Skipping kamiwaza-wheel install for development install."
-            else
-                print_in_color red "Warning: kamiwaza wheel file not found. Please ensure the wheel file is available and rerun this installer."
-            fi
-        else
-            pip install "$kamiwaza_wheel"
-        fi
+        # if [[ -z "$kamiwaza_wheel" ]]; then
+        #     if [ -f "compile.sh" ]; then
+        #         print_in_color yellow "Skipping kamiwaza-wheel install for development install."
+        #     else
+        #         print_in_color red "Warning: kamiwaza wheel file not found. Please ensure the wheel file is available and rerun this installer."
+        #     fi
+        # else
+        #     pip install "$kamiwaza_wheel"
+        # fi
         
-        pip install -r requirements.txt
-        pip install -r notebooks/extra-requirements.txt
+        # pip install -r requirements.txt
+        # pip install -r notebooks/extra-requirements.txt
         )
     fi
 fi
