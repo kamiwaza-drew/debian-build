@@ -147,10 +147,10 @@ echo "=== Installing cockroach ==="
 tar -xzf $COCKROACH_TGZ -C $INSTALL_DIR
 sudo ln -sf "$INSTALL_DIR/cockroach-v24.1.0.linux-amd64/cockroach" /usr/local/bin/cockroach
 
-# Install the debs
-update_progress "Installing debs"
-echo "=== Installing debs ==="
-sudo dpkg -i /usr/share/kamiwaza/offline_debs/*.deb
+# # Install the debs
+# update_progress "Installing debs"
+# echo "=== Installing debs ==="
+# sudo dpkg -i /usr/share/kamiwaza/offline_debs/*.deb
 
 
 # Set permissions
@@ -186,8 +186,7 @@ EOL
     fi
 fi
     
-    # Source the environment file
-    source env.sh
+
 
 
 
@@ -375,17 +374,9 @@ echo "=== Setting permissions ==="
 sudo chown -R $USER:$USER "$INSTALL_DIR"
 sudo chmod -R 755 "$INSTALL_DIR"
 
-
-
-cd $INSTALL_DIR
-update_progress "=== Installing kamiwaza Python Dependencies ==="
-. env.sh
-. common.sh
-# Setup kamiwaza-start as a command
 echo '#!/bin/sh
 /opt/kamiwaza/linux-install.sh --non-interactive "$@"' | sudo tee /usr/local/bin/kamiwaza-start > /dev/null
 sudo chmod +x /usr/local/bin/kamiwaza-start
-
 
 log_info "================================================="
 log_info "=== Kamiwaza offline installation complete! ==="
