@@ -1,13 +1,3 @@
-#!/bin/bash
-# Script to download all required Python wheels and .deb packages for offline installation
-
-# Remove set -e to prevent silent failures
-# set -e
-# Remove any old lock files from all relevant locations
-sudo rm -f .packaging.lock
-sudo -f kamiwaza-deb/.packaging.lock
-sudo -f kamiwaza-deb/kamiwaza-test/.packaging.lock
-
 
 # Set a variable of the directory of the script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,6 +34,12 @@ check_and_fix_permissions() {
     fi
 }
 
+# Remove set -e to prevent silent failures
+# set -e
+# Remove any old lock files from all relevant locations
+sudo rm -f .packaging.lock
+sudo -f kamiwaza-deb/.packaging.lock
+sudo -f kamiwaza-deb/kamiwaza-test/.packaging.lock
 
 
 # Initial permission and cleanup checks
@@ -113,15 +109,25 @@ git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza.git
 
 
 # ============= DEV-ONLY: Overwrite extracted files with /home/kamiwaza/temp_use/ =============
-echo "=== [DEV ONLY] Overwriting extracted files with $SCRIPT_DIR/temp_use/ ==="
+log_info "=== [DEV ONLY] Overwriting extracted files with $SCRIPT_DIR/temp_use/ ==="
 cd "$SCRIPT_DIR"
 if [ -d "temp_use/" ]; then
     cp -rf temp_use/* "$GITHUB_DIR/kamiwaza-deploy/"
-    echo "[DEV ONLY] Copied files from $SCRIPT_DIR/temp_use/ to $GITHUB_DIR/kamiwaza-deploy/"
+    log_info "[DEV ONLY] Copied files from $SCRIPT_DIR/temp_use/ to $GITHUB_DIR/kamiwaza-deploy/"
 else
-    echo "[DEV ONLY] $SCRIPT_DIR/temp_use/ does not exist, skipping dev overwrite."
+    log_info "[DEV ONLY] $SCRIPT_DIR/temp_use/ does not exist, skipping dev overwrite."
 fi
 # ============= END DEV-ONLY =============
+
+
+
+
+# NOW RUN THE PACKAGING SCRIPTS
+log_info "Building Docker Images"
+bash rebuild.sh
+
+log_info "Ensuring Docker Compose files are present"
+bash copy-composer.sh
 
 
 
@@ -144,6 +150,8 @@ if [ ! -f "$GITHUB_DIR/kamiwaza-deploy/kamiwaza-deploy.tar.gz" ]; then
     exit 1
 fi
 
+sudo rm -rf "$GITHUB_DIR"/kamiwaza-deploy-source
+
 log_info "Successfully created kamiwaza-deploy.tar.gz in kamiwaza-deploy directory"
 
 # Ensure wheel and build tools are available on dev's machine
@@ -152,64 +160,6 @@ pip install --upgrade pip setuptools wheel
 # Build Python wheels for requirements.txt
 echo "Building Python wheels for requirements.txt..."
 pip wheel -r "$GITHUB_DIR"/kamiwaza-deploy/requirements.txt -w "$PYTHON_WHEELS_DIR"
-
-
-# # ############################## START DOWNLOADING .DEB PACKAGES
-# # 2. Download .deb packages for all apt dependencies
-# # List of required packages (from your install_dependencies function)
-# DEB_PACKAGES=(
-#     python3.10
-#     python3.10-dev
-#     libpython3.10-dev
-#     python3.10-venv
-#     golang-cfssl
-#     python-is-python3
-#     etcd-client
-#     net-tools
-#     build-essential
-#     g++
-#     jq
-#     libjq1
-#     pkg-config
-#     libcairo2-dev
-#     libcairo-script-interpreter2
-#     libfontconfig1-dev
-#     libfreetype6-dev
-#     libx11-dev
-#     libxrender-dev
-#     libxext-dev
-#     libpng-dev
-#     libsm-dev
-#     libpixman-1-dev
-#     libxcb1-dev
-#     libxcb-render0-dev
-#     libxcb-shm0-dev
-#     libglib2.0-dev
-#     python3-dev
-#     libgirepository1.0-dev
-#     libffi-dev
-#     python3-gi
-#     gir1.2-gtk-3.0
-#     libgirepository-1.0-1
-#     gobject-introspection
-#     python3-mako
-#     python3-markdown
-#     software-properties-common
-# )
-
-# # To reset:
-# # sudo dpkg --purge --force-depends kamiwaza
-# # sudo apt-get -f install
-# # sudo apt update & sudo  apt upgrade
-
-# echo "Downloading .deb packages and dependencies..."
-
-# sudo apt update
-# sudo apt install --reinstall --download-only -y -o=dir::cache="$DEB_PACKAGES_DIR" "${DEB_PACKAGES[@]}"
-# sudo find "$DEB_PACKAGES_DIR/archives/" -name "*.deb" -exec mv {} "$DEB_PACKAGES_DIR" \; 2>/dev/null || true
-# sudo rm -rf "$DEB_PACKAGES_DIR/archives"
-# sudo chown -R $USER:$USER "$DEB_PACKAGES_DIR"
-
 
 # ############################## START DOWNLOADING TARBALLS
 # 3. Download CockroachDB tarball
@@ -308,95 +258,4 @@ if [ $VERIFY_STATUS -gt 0 ]; then
     exit 1
 fi
 
-log_info "All required files have been downloaded for offline installation."
-
-# ############################## START PACKAGING THE INSTALLER
-package_files() {
-    local start_time=$(date +%s)
-    local build_dir="$GITHUB_DIR/.."
-    local exit_code=0
-
-    cd "$build_dir" || {
-        log_error "Failed to change directory to $build_dir"
-        return 1
-    }
-
-    # Create a lockfile to prevent multiple builds
-    if [ -f ".packaging.lock" ]; then
-        log_error "Another packaging process is running. If this is incorrect, remove .packaging.lock"
-        return 1
-    fi
-    
-    touch .packaging.lock
-
-    # Cleanup function
-    cleanup() {
-        rm -f .packaging.lock
-        if [ "${exit_code:-1}" -ne 0 ]; then
-            log_error "Packaging failed. Check the logs above for details."
-            cleanup_build_artifacts
-        fi
-    }
-    trap cleanup EXIT
-
-    # Ensure clean build environment
-    log_info "Cleaning build environment..."
-    cleanup_build_artifacts
-    
-    log_info "Starting package build process..."
-    
-    # Use parallel compression if available
-    if command -v pigz > /dev/null; then
-        export COMPRESSION_COMMAND="pigz"
-    else
-        export COMPRESSION_COMMAND="gzip"
-    fi
-    
-    # Set environment variables for faster builds
-    export DEB_BUILD_OPTIONS="parallel=$(nproc)"
-    
-    # Build the package
-    if ! sudo dpkg-buildpackage -us -uc -rfakeroot; then
-        exit_code=1
-        return 1
-    fi
-
-    local end_time=$(date +%s)
-    local duration=$((end_time - start_time))
-    log_info "Package built successfully in $duration seconds"
-    
-    # Fix permissions of the output files
-    log_info "Fixing permissions of output files..."
-    find .. -maxdepth 1 -name "*.deb" -o -name "*.changes" -o -name "*.buildinfo" | while read file; do
-        sudo chown $USER:$USER "$file"
-    done
-    
-    # Verify the built package
-    if ! dpkg-deb --info ../*.deb >/dev/null 2>&1; then
-        log_error "Package verification failed"
-        exit_code=1
-        return 1
-    fi
-    
-    log_info "Package verified successfully"
-    return 0
-}
-# Determine if we should package files into a deb package
-PACKAGE_CHOICE="n"
-if [[ "$*" == *"--full"* ]]; then
-    PACKAGE_CHOICE="y"
-else
-    read -p "Do you want to package the files into a deb package? (y/N): " PACKAGE_CHOICE
-fi
-
-if [[ "$PACKAGE_CHOICE" == "y" ]]; then
-    cd "$GITHUB_DIR"
-    log_info "Packaging the files into a deb package..."
-    
-    if ! package_files; then
-        log_error "Failed to create package"
-        exit 1
-    fi
-    log_info "Deb package created successfully in $(realpath ..)"
-fi
-# deadsnakes-ubuntu-ppa-jammy.list 
+log_info "All required files have been downloaded for offline installation. Please run the bundle-linux.sh script to bundle the files into a single deb package."
