@@ -49,7 +49,7 @@ check_and_fix_permissions() {
 # Initial permission and cleanup checks
 log_info "Performing initial permission and cleanup checks..."
 
-GITHUB_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test"
+GITHUB_DIR="$SCRIPT_DIR/kamiwaza-deb/kamiwaza-test"
 
 # If github directory does not exist, create it. If it exists, remove it.
 if [ ! -d "$GITHUB_DIR" ]; then
@@ -59,11 +59,11 @@ else
 fi
 
 # Directories to store offline packages
-PYTHON_WHEELS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_python_wheels"
-COCKROACH_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cockroach"
-CUDA_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_cuda"
-NODEJS_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_nodejs"
-DOCKER_DIR="/home/kamiwaza/debian-packaging/kamiwaza-deb/kamiwaza-test/offline_docker"
+PYTHON_WHEELS_DIR="$SCRIPT_DIR/kamiwaza-deb/kamiwaza-test/offline_python_wheels"
+COCKROACH_DIR="$SCRIPT_DIR/kamiwaza-deb/kamiwaza-test/offline_cockroach"
+CUDA_DIR="$SCRIPT_DIR/kamiwaza-deb/kamiwaza-test/offline_cuda"
+NODEJS_DIR="$SCRIPT_DIR/kamiwaza-deb/kamiwaza-test/offline_nodejs"
+DOCKER_DIR="$SCRIPT_DIR/kamiwaza-deb/kamiwaza-test/offline_docker"
 
 
 mkdir -p "$PYTHON_WHEELS_DIR" "$COCKROACH_DIR" "$CUDA_DIR" "$NODEJS_DIR" "$DOCKER_DIR"
@@ -112,7 +112,7 @@ fi
 git clone --branch "$GIT_BRANCH" https://github.com/m9e/kamiwaza.git
 
 
-# ============= DEV-ONLY: Overwrite extracted files with /home/kamiwaza/temp_use/ =============
+# ============= DEV-ONLY: Overwrite extracted files with $SCRIPT_DIR/temp_use/ =============
 echo "=== [DEV ONLY] Overwriting extracted files with $SCRIPT_DIR/temp_use/ ==="
 cd "$SCRIPT_DIR"
 if [ -d "temp_use/" ]; then
