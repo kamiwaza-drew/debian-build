@@ -3,7 +3,7 @@
 # Based on Windows WSL Installation Guide
 echo "=== Starting Kamiwaza installation LINNY DREW ==="
 set -e  # Exit on error
-cd /opt/kamiwaza
+INSTALL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 echo "Working directory: $(pwd)"
 
 
@@ -47,8 +47,8 @@ REQUIRED_PACKAGES=(
     python3-markdown
     software-properties-common
 )
-DEBS_DIR="/opt/kamiwaza/offline_debs"
-FIRST_RUN_FLAG="/opt/kamiwaza/.offline_deps_installed"
+DEBS_DIR="$INSTALL_DIR/offline_debs"
+FIRST_RUN_FLAG="$INSTALL_DIR/.offline_deps_installed"
 sudo touch "$FIRST_RUN_FLAG"
 sudo chmod 644 "$FIRST_RUN_FLAG"
 
@@ -96,12 +96,10 @@ for arg in "$@"; do
     esac
 done
 
-# Determine the root directory of this script and export it as current_dir
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-current_dir="${script_dir}"
+# Determine the root directory of this script and export it as INSTALL_DIR
 host_ip=$(hostname -I | awk '{print $1}')
 export KAMIWAZA_HEAD_IP=$host_ip
-export current_dir
+export INSTALL_DIR
 export host_ip
 
 
@@ -145,10 +143,10 @@ check_distribution() {
 
 # Wait for package manager lock function
 wait_for_package_lock() {
-    if [ -d "$current_dir/venv" ]; then
+    if [ -d "$INSTALL_DIR/venv" ]; then
         log_info "Found existing virtual environment. Activating it..."
-        source "$current_dir/venv/bin/activate"
-        export VIRTUAL_ENV="$current_dir/venv"
+        source "$INSTALL_DIR/venv/bin/activate"
+        export VIRTUAL_ENV="$INSTALL_DIR/venv"
     fi
 
     log_info "Removing any existing package manager locks..."
@@ -238,7 +236,7 @@ verify_docker() {
         log_warn "You do not have access to the Docker daemon. Attempting to add you to the 'docker' group..."
         sudo usermod -aG docker $(whoami)
         log_info "Your user $(whoami) has been added to the 'docker' group."
-        cd $current_dir
+        cd $INSTALL_DIR
     else 
         log_info "You have access to the Docker daemon."
     fi
@@ -335,8 +333,8 @@ setup_permissions() {
     
     # Make certs executable
     log_info "Setting up certificate permissions..."
-    if [ -d "runtime/etcd/certs" ]; then
-        sudo chown -R ${current_user}:${current_user} runtime/etcd/certs/* 2>/dev/null || true
+    if [ -d "$INSTALL_DIR/runtime/etcd/certs" ]; then
+        sudo chown -R ${current_user}:${current_user} $INSTALL_DIR/runtime/etcd/certs/* 2>/dev/null || true
         log_info "Certificate permissions updated."
     else
         log_warn "Directory runtime/etcd/certs not found. Skipping permission change."
@@ -354,11 +352,11 @@ setup_permissions() {
         read -p "Make all repository files executable? This is optional but may be needed. [y/N]: " make_executable
     fi
     
-    # if [[ "$make_executable" == "y" || "$make_executable" == "Y" ]]; then
-    #     log_info "Making all files executable (this may take a moment)..."
-    #     sudo find . -type f -exec chmod +x {} \; 2>/dev/null || true
-    #     log_info "All files are now executable."
-    # fi
+    if [[ "$make_executable" == "y" || "$make_executable" == "Y" ]]; then
+        log_info "Making all files executable (this may take a moment)..."
+        sudo find . -type f -exec chmod +x {} \; 2>/dev/null || true
+        log_info "All files are now executable."
+    fi
 }
 
 # Setup Python environment
@@ -386,15 +384,15 @@ setup_python_env() {
     
     # Create and activate virtual environment
     python3.10 -m venv venv
-    log_info "Virtual environment created at $current_dir/venv. Activating it now..."
-    source "$current_dir/venv/bin/activate"
+    log_info "Virtual environment created at $INSTALL_DIR/venv. Activating it now..."
+    source "$INSTALL_DIR/venv/bin/activate"
     
     # Set Python Path
-    export PYTHONPATH="$current_dir"
+    export PYTHONPATH="$INSTALL_DIR"
     
     # Install requirements
     log_info "Installing Python requirements..."
-    req_path=${req_path:-"$current_dir/requirements.txt"}
+    req_path=${req_path:-"$INSTALL_DIR/requirements.txt"}
     pip install -r $req_path
     sudo apt-get install libgirepository1.0-dev
     sudo apt-get install python3-gi
@@ -475,12 +473,19 @@ launch_ray() {
     # Use the existing start-ray.sh script
     log_info "Starting Ray using start-ray.sh..."
     # print working directory
-    log_info "Current directory: $current_dir"
+    log_info "Current directory: $INSTALL_DIR"
     if [ -f "start-ray.sh" ]; then
-        bash $current_dir/start-ray.sh
-        echo "Ray launched successfully."
+        if bash $INSTALL_DIR/start-ray.sh; then
+            echo "Ray launched successfully."
+        else
+            log_error "Ray failed to start. Please try the following:"
+            log_error "1. Kill any processes using Ray's ports: 'sudo lsof -ti:8265 | xargs -r sudo kill -9'"
+            log_error "2. Check for multiple WSL instances using the required ports"
+            log_error "3. On Windows, use 'netstat -ano | findstr :8265' and 'taskkill /F /PID <process_id>'"
+            log_error "4. Run 'ray stop' and then 'bash start-ray.sh' manually"
+        fi
     else
-        echo "$current_dir/start-ray.sh script not found."
+        echo "$INSTALL_DIR/start-ray.sh script not found."
         exit 1
     fi
 }
@@ -489,7 +494,7 @@ launch_ray() {
 # Function to start the frontend
 setup_frontend() {
     log_info "Starting Kamiwaza frontend..."
-    log_info "Current directory: $current_dir"
+    log_info "Current directory: $INSTALL_DIR"
     
     # Ensure npm is installed before starting frontend
     if ! command_exists npm; then
@@ -543,9 +548,9 @@ setup_frontend() {
     fi
     
     # Ensure the directory has permissions to access all node modules
-    if [ -d "$current_dir/frontend" ]; then
+    if [ -d "$INSTALL_DIR/frontend" ]; then
         log_info "Setting permissions for frontend directory..."
-        sudo chown -R $(whoami):$(whoami) "$current_dir/frontend"
+        sudo chown -R $(whoami):$(whoami) "$INSTALL_DIR/frontend"
     fi
     
     if [ "$NON_INTERACTIVE" = true ]; then
@@ -559,13 +564,13 @@ setup_frontend() {
     fi
     
     if [[ "$reinstall_node_modules" == "y" || "$reinstall_node_modules" == "Y" ]]; then
-        (cd "$current_dir/frontend" && npm cache clean --force && rm -rf node_modules && npm install --no-bin-links)
+        (cd "$INSTALL_DIR/frontend" && npm cache clean --force && rm -rf node_modules && npm install --no-bin-links)
     fi
     
     if [[ "$run_dev_mode" == "y" || "$run_dev_mode" == "Y" ]]; then
-        (cd "$current_dir/frontend" && npm install && npm run dev)
+        (cd "$INSTALL_DIR/frontend" && npm install && npm run dev)
     else
-        (cd "$current_dir/frontend" && npm install && npm run prod)
+        (cd "$INSTALL_DIR/frontend" && npm install && npm run prod)
     fi
 }
 
@@ -644,8 +649,16 @@ install_kamiwaza() {
     # Run the core installation
     export KAMIWAZA_RUN_FROM_INSTALL='yes'
 
-    # bash containers-up.sh
 
+    log_info "########################################################"
+    log_info "Step 10: Run first-boot.sh"
+    log_info "########################################################"
+    
+    bash first-boot.sh --head
+
+    log_info "########################################################"
+    log_info "Step 11: Run install.py"
+    log_info "########################################################"
     python install.py
 
     unset KAMIWAZA_RUN_FROM_INSTALL
@@ -744,34 +757,34 @@ EOF
 
     # Create etcd certs directory
     log_info "Creating and populating etcd certs directory..."
-    mkdir -p /opt/kamiwaza/runtime/etcd/certs/
+    mkdir -p "$INSTALL_DIR/runtime/etcd/certs/"
     
     # Copy server.crt as ca.pem and server.key as ca.key for etcd
-    cp server.crt /opt/kamiwaza/runtime/etcd/certs/ca.pem
-    cp server.key /opt/kamiwaza/runtime/etcd/certs/ca.key
+    cp server.crt "$INSTALL_DIR/runtime/etcd/certs/ca.pem"
+    cp server.key "$INSTALL_DIR/runtime/etcd/certs/ca.key"
     
     # Generate peer certificates with the exact naming pattern required by Kamiwaza
     log_info "Generating peer certificates required by Kamiwaza..."
     
     # Copy the key with the peer-hostname-key.pem naming pattern
-    cp server.key "/opt/kamiwaza/runtime/etcd/certs/peer-${hostname}-key.pem"
+    cp server.key "$INSTALL_DIR/runtime/etcd/certs/peer-${hostname}-key.pem"
     
     # Create the certificate with the peer-hostname.pem naming pattern
-    openssl req -x509 -nodes -new -key "/opt/kamiwaza/runtime/etcd/certs/peer-${hostname}-key.pem" \
-      -out "/opt/kamiwaza/runtime/etcd/certs/peer-${hostname}.pem" \
+    openssl req -x509 -nodes -new -key "$INSTALL_DIR/runtime/etcd/certs/peer-${hostname}-key.pem" \
+      -out "$INSTALL_DIR/runtime/etcd/certs/peer-${hostname}.pem" \
       -days 365 \
       -config cert.cnf \
       -extensions v3_req
     
     # Also create standard server/client certs for completeness
-    cp server.key /opt/kamiwaza/runtime/etcd/certs/server-key.pem
-    cp server.crt /opt/kamiwaza/runtime/etcd/certs/server.pem
-    cp server.key /opt/kamiwaza/runtime/etcd/certs/client-key.pem
-    cp server.crt /opt/kamiwaza/runtime/etcd/certs/client.pem
+    cp server.key "$INSTALL_DIR/runtime/etcd/certs/server-key.pem"
+    cp server.crt "$INSTALL_DIR/runtime/etcd/certs/server.pem"
+    cp server.key "$INSTALL_DIR/runtime/etcd/certs/client-key.pem"
+    cp server.crt "$INSTALL_DIR/runtime/etcd/certs/client.pem"
     
     # Set correct permissions
-    chmod 644 /opt/kamiwaza/runtime/etcd/certs/*.pem
-    chmod 600 /opt/kamiwaza/runtime/etcd/certs/*-key.pem
+    chmod 644 $INSTALL_DIR/runtime/etcd/certs/*.pem 2>/dev/null || true
+    chmod 600 $INSTALL_DIR/runtime/etcd/certs/*-key.pem 2>/dev/null || true
     
     log_info "SSL certificates generated, trusted, and copied to etcd certs directory with correct naming patterns."
 }
@@ -946,29 +959,69 @@ wait_for_service() {
     return 0
 }
 
+check_installation_directory() {
+    # Check if the directory kamiwaza exists under the installation directory and has data and the correct permissions
+    if [ -d "$INSTALL_DIR/kamiwaza" ]; then
+        log_info "Kamiwaza installation directory exists and has data."
+    else
+        while true; do
+            read -p "Do you want to use SSH (s) or HTTPS (h) for cloning? [s/h]: " clone_method
+            if [[ "$clone_method" == "s" ]]; then
+                git clone git@github.com:m9e/kamiwaza.git "$INSTALL_DIR/kamiwaza"
+                break
+            elif [[ "$clone_method" == "h" ]]; then
+                git clone https://github.com/m9e/kamiwaza.git "$INSTALL_DIR/kamiwaza"
+                break
+            else
+                log_error "Invalid option. Please enter 's' for SSH or 'h' for HTTPS."
+            fi
+        done
+    fi
+}
+
 # Main function to orchestrate the installation
 main() {
     log_info "Starting Kamiwaza installation on Ubuntu..."
-    # Define installation directory if not already defined
-    INSTALL_DIR=${INSTALL_DIR:-/opt/kamiwaza}
-    
-    # Ensure proper permissions for the installation directory
-    log_info "Setting permissions for installation directory..."
+
+    # Step 1: Check/Prepare Installation Directory
+    log_info "########################################################"
+    log_info "Step 1: Check/Prepare Installation Directory"
+    log_info "########################################################"
+    export INSTALL_DIR
+    check_installation_directory
+
+    # Step 2: Set Permissions for Installation Directory
+    log_info "########################################################"
+    log_info "Step 2: Set Permissions for Installation Directory"
+    log_info "########################################################"
     sudo chmod -R 770 $INSTALL_DIR
     sudo chown -R ${current_user}:${current_user} $INSTALL_DIR
-    
-    # Check environment
+
+    # Step 3: Check Distribution/Environment
+    log_info "########################################################"
+    log_info "Step 3: Check Distribution/Environment"
+    log_info "########################################################"
     check_distribution
 
     log_info "########################################################"
-    log_info "Step 6: Verify Docker"
+    log_info "Step 4: Install dependencies"
+    log_info "########################################################"
+    install_dependencies
+
+    log_info "########################################################"
+    log_info "Step 5: Verify Docker"
     log_info "########################################################"
     verify_docker
 
     log_info "########################################################"
-    log_info "Step 7: Generate SSL certificate"
+    log_info "Step 6: Generate SSL certificate"
     log_info "########################################################"
     generate_ssl_cert
+
+    log_info "########################################################"
+    log_info "Step 7: Setup Python environment"
+    log_info "########################################################"
+    setup_python_env
 
     log_info "########################################################"
     log_info "Step 8: Launch Ray"
@@ -976,44 +1029,40 @@ main() {
     launch_ray
 
     log_info "########################################################"
-    log_info "Step 9: Install Kamiwaza"
+    log_info "Step 10: Install Kamiwaza"
     log_info "########################################################"
     install_kamiwaza
 
     log_info "Running final permissions check and fix..."
     current_user=$(whoami)
-    
+
     # Fix deployment directory permissions
     if [ -d "kamiwaza/deployment" ]; then
         sudo chown -R ${current_user}:${current_user} kamiwaza/deployment
     fi
-    
+
     # Fix frontend permissions
     if [ -d "frontend" ]; then
         sudo chown -R ${current_user}:${current_user} frontend
     fi
-    
-    if [ -f llamacpp.commit ] ; then
-        if [[ "$install_llamacpp" == "yes" || "$(uname)" == "Darwin" ]]; then
-            log_info "### Installing llamacpp..."
-            bash build-llama-cpp.sh
-        else
-            log_info "Skipping llamacpp installation."
-        fi
+    read -p "Do you want to install llamacpp? [y/N]: " install_llamacpp
+    if [[ "$install_llamacpp" == "y" || "$install_llamacpp" == "Y" ]]; then
+        log_info "### Installing llamacpp..."
+        bash build-llama-cpp.sh
     fi
     
     # Set permissions on runtime directory if it exists
     if [ -d "runtime" ]; then
         sudo chown -R ${current_user}:${current_user} runtime
     fi
-    
+
     log_info "Installation process completed!"
     log_info "To confirm the CockroachDB is working, navigate to:"
     log_info "cd kamiwaza/deployment/envs/default/kamiwaza-cockroachdb/amd64"
-    
+
     log_info "Remember to activate the virtual environment when needed with:"
     log_info "source ./venv/bin/activate"
-    
+
     log_info "If you encounter permission issues, run the troubleshooting option 8 to fix permissions."
     log_info "########################################################"
     log_info "Installation process completed!"

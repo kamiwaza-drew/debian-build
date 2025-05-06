@@ -28,7 +28,6 @@ package_files() {
         return 1
     }
 
-    trap cleanup EXIT
 
     log_info "Starting package build process..."
     
